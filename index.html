@@ -184,6 +184,7 @@
             gap: 8px;
             font-size: 0.85rem;
             cursor: pointer;
+            user-select: none;
         }
 
         .yarn-item input[type="checkbox"] {
@@ -298,7 +299,7 @@
                 <div class="form-grid">
                     <div class="form-group full-width">
                         <label for="customerName">客戶名稱</label>
-                        <input type="text" id="customerName" list="customerDatalist" required placeholder="點選選單或輸入名稱..." onchange="onCustomerChange()" oninput="onCustomerChange()" onfocus="this.select()">
+                        <input type="text" id="customerName" list="customerDatalist" required placeholder="點選選單或輸入名稱..." autocomplete="off">
                         <datalist id="customerDatalist"></datalist>
                     </div>
 
@@ -377,7 +378,7 @@
 
                 <div class="btn-group">
                     <button type="submit" class="btn-success" id="saveBtn">儲存訂單資料</button>
-                    <button type="button" class="btn-primary" id="cancelBtn" style="display:none; background-color: #64748b;" onclick="resetForm()">取消修改</button>
+                    <button type="button" class="btn-primary" id="cancelBtn" style="display:none; background-color: #64748b;">取消修改</button>
                 </div>
             </form>
         </div>
@@ -389,16 +390,16 @@
                 <div class="filter-grid">
                     <div class="form-group">
                         <label for="filterCustomer">依客戶篩選</label>
-                        <select id="filterCustomer" onchange="renderTable()">
+                        <select id="filterCustomer">
                             <option value="">-- 全部客戶 --</option>
                         </select>
                     </div>
                     <div class="form-group">
                         <label for="filterKeyword">關鍵字搜尋</label>
-                        <input type="text" id="filterKeyword" placeholder="搜尋布種、紗種、顏色、備註..." oninput="renderTable()">
+                        <input type="text" id="filterKeyword" placeholder="搜尋布種、紗種、顏色、備註...">
                     </div>
                     <div>
-                        <button class="btn-excel" onclick="exportOrdersToExcel()">📄 匯出 Excel 訂單報表</button>
+                        <button class="btn-excel" id="exportBtn">📄 匯出 Excel 訂單報表</button>
                     </div>
                 </div>
             </div>
@@ -448,7 +449,6 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
     
-    // 設定相應的 Firebase Realtime Database 節點名稱
     const orderRef = ref(db, 'orderRecords');
     const yarnRef = ref(db, 'yarnRecords');
 
@@ -503,7 +503,7 @@
     }
 
     // 依客戶連動紗帳庫存
-    window.onCustomerChange = function() {
+    function onCustomerChange() {
         const custName = document.getElementById("customerName").value.trim();
         const container = document.getElementById("yarnCheckboxGroup");
 
@@ -518,7 +518,7 @@
             if (item.customerName && item.customerName.trim() === custName && item.yarnType) {
                 const type = item.yarnType.trim();
                 const weight = parseFloat(item.weight) || 0;
-                // 進紗為正，出紗為負 (同時相容英文 OUT 或中文 出紗)
+                // 進紗為正，出紗為負
                 const isOut = item.type === '出紗' || item.type === 'OUT' || item.type === '出庫';
                 const sign = isOut ? -1 : 1;
                 yarnStockMap[type] = (yarnStockMap[type] || 0) + (weight * sign);
@@ -529,11 +529,11 @@
         const availableYarns = Object.keys(yarnStockMap).filter(type => yarnStockMap[type] > 0);
 
         if (availableYarns.length === 0) {
-            container.innerHTML = `<span style="color: #94a3b8; font-size: 0.85rem;">該客戶目前無紗庫存紀錄</span>`;
+            container.innerHTML = `<span style="color: #ef4444; font-size: 0.85rem;">⚠️ 客戶「${custName}」目前無庫存紗種</span>`;
             return;
         }
 
-        // 記錄目前已被勾選的項目 (若有)
+        // 記錄目前已被勾選的項目
         const selectedValues = Array.from(container.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
 
         container.innerHTML = "";
@@ -545,9 +545,22 @@
             label.innerHTML = `<input type="checkbox" value="${y}" ${checked}> ${y} <span style="color:#64748b; font-size:0.75rem;">(庫存: ${stockQty}kg)</span>`;
             container.appendChild(label);
         });
-    };
+    }
 
-    window.renderTable = function() {
+    // 監聽客戶名稱輸入框變動
+    const custInput = document.getElementById("customerName");
+    custInput.addEventListener("input", onCustomerChange);
+    custInput.addEventListener("change", onCustomerChange);
+    custInput.addEventListener("blur", onCustomerChange);
+    custInput.addEventListener("focus", function() { this.select(); });
+
+    // 監聽篩選條目
+    document.getElementById("filterCustomer").addEventListener("change", renderTable);
+    document.getElementById("filterKeyword").addEventListener("input", renderTable);
+    document.getElementById("exportBtn").addEventListener("click", exportOrdersToExcel);
+    document.getElementById("cancelBtn").addEventListener("click", resetForm);
+
+    function renderTable() {
         const selectedCustomer = document.getElementById("filterCustomer").value;
         const keyword = document.getElementById("filterKeyword").value.toLowerCase().trim();
         const tbody = document.getElementById("orderTableBody");
@@ -581,14 +594,12 @@
         currentRenderedOrders.forEach(item => {
             const row = document.createElement("tr");
 
-            // 機台規格整合顯示
             const specs = [
                 item.machineInch ? `${item.machineInch}` : '',
                 item.machineNeedle ? `${item.machineNeedle}` : '',
                 item.feederCount ? `${item.feederCount}口` : ''
             ].filter(Boolean).join(' / ') || '-';
 
-            // 顏色與染廠整合顯示
             const colorDye = [
                 item.color || '',
                 item.dyeingFactory ? `(${item.dyeingFactory})` : ''
@@ -604,13 +615,21 @@
                 <td>${colorDye}</td>
                 <td>${item.remark || "-"}</td>
                 <td>
-                    <button class="btn-primary" style="padding: 4px 8px; font-size: 0.85rem;" onclick="editOrder('${item.key}')">編輯</button>
-                    <button class="btn-danger" onclick="deleteOrder('${item.key}')">刪除</button>
+                    <button class="btn-primary btn-edit" style="padding: 4px 8px; font-size: 0.85rem;" data-key="${item.key}">編輯</button>
+                    <button class="btn-danger btn-del" data-key="${item.key}">刪除</button>
                 </td>
             `;
             tbody.appendChild(row);
         });
-    };
+
+        // 綁定動態生成的按鈕事件
+        tbody.querySelectorAll(".btn-edit").forEach(btn => {
+            btn.addEventListener("click", () => editOrder(btn.dataset.key));
+        });
+        tbody.querySelectorAll(".btn-del").forEach(btn => {
+            btn.addEventListener("click", () => deleteOrder(btn.dataset.key));
+        });
+    }
 
     document.getElementById("orderForm").addEventListener("submit", function(e) {
         e.preventDefault();
@@ -649,7 +668,7 @@
         resetForm();
     });
 
-    window.editOrder = function(key) {
+    function editOrder(key) {
         const item = orderDataMap[key];
         document.getElementById("editKey").value = key;
         document.getElementById("customerName").value = item.customerName;
@@ -685,15 +704,15 @@
         document.getElementById("cancelBtn").style.display = "inline-flex";
 
         window.scrollTo({ top: 0, behavior: 'smooth' });
-    };
+    }
 
-    window.deleteOrder = function(key) {
+    function deleteOrder(key) {
         if (confirm("確定要刪除這筆訂單資料嗎？")) {
             remove(ref(db, `orderRecords/${key}`));
         }
-    };
+    }
 
-    window.resetForm = function() {
+    function resetForm() {
         document.getElementById("orderForm").reset();
         document.getElementById("editKey").value = "";
         document.getElementById("orderDate").valueAsDate = new Date();
@@ -701,9 +720,9 @@
         document.getElementById("saveBtn").innerText = "儲存訂單資料";
         document.getElementById("cancelBtn").style.display = "none";
         onCustomerChange();
-    };
+    }
 
-    window.exportOrdersToExcel = function() {
+    function exportOrdersToExcel() {
         if (currentRenderedOrders.length === 0) {
             alert("目前沒有訂單紀錄可供匯出！");
             return;
@@ -731,7 +750,7 @@
 
         const custLabel = document.getElementById("filterCustomer").value || "全部客戶";
         XLSX.writeFile(workbook, `德峰訂單報表_${custLabel}.xlsx`);
-    };
+    }
 </script>
 
 </body>
