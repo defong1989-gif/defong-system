@@ -318,7 +318,7 @@
                 <!-- 紗種動態下拉選單 -->
                 <div class="form-group full-width">
                     <label for="yarnType">紗種（自動抓取紗帳庫存）</label>
-                    <input type="text" id="yarnType" list="yarnTypeDatalist" required placeholder="先輸入客戶以選擇紗種..." onchange="updateYarnStockTip()">
+                    <input type="text" id="yarnType" list="yarnTypeDatalist" required placeholder="先輸入客戶以選擇紗種..." onchange="updateYarnStockTip()" oninput="updateYarnStockTip()">
                     <datalist id="yarnTypeDatalist"></datalist>
                     <div id="yarnStockTip" class="yarn-stock-info"></div>
                 </div>
@@ -459,7 +459,8 @@
     const db = getDatabase(app);
     
     const orderRef = ref(db, 'orderRecords');
-    const yarnRef = ref(db, 'yarnRecords');
+    // 對齊紗帳系統的節點路徑 'yarns'
+    const yarnRef = ref(db, 'yarns');
 
     let orderDataMap = {};
     let yarnDataMap = {};
@@ -483,11 +484,11 @@
         onCustomerChange(); // 重新整理動態紗種清單
     });
 
-    // 更新客戶下拉提示
+    // 更新客戶下拉提示（抓取訂單與紗帳系統中的客戶名稱，欄位：customer）
     function updateCustomerDropdowns() {
         const customers = new Set();
         Object.values(orderDataMap).forEach(i => i.customerName && customers.add(i.customerName.trim()));
-        Object.values(yarnDataMap).forEach(i => i.customerName && customers.add(i.customerName.trim()));
+        Object.values(yarnDataMap).forEach(i => i.customer && customers.add(i.customer.trim()));
 
         const sortedCustomers = Array.from(customers).sort();
 
@@ -511,7 +512,7 @@
         filterSelect.value = currentVal;
     }
 
-    // 當客戶改變時，自動擷取該客戶在「紗帳」中的紗種庫存
+    // 當客戶改變時，自動擷取該客戶在「紗帳」中的紗種庫存（欄位：customer 與 type）
     window.onCustomerChange = function() {
         const custName = document.getElementById("customerName").value.trim();
         const yarnDatalist = document.getElementById("yarnTypeDatalist");
@@ -525,8 +526,8 @@
         // 搜尋此客戶在紗帳紀錄中的所有紗種
         const availableYarns = new Set();
         Object.values(yarnDataMap).forEach(item => {
-            if (item.customerName && item.customerName.trim() === custName && item.yarnType) {
-                availableYarns.add(item.yarnType.trim());
+            if (item.customer && item.customer.trim() === custName && item.type) {
+                availableYarns.add(item.type.trim());
             }
         });
 
@@ -540,7 +541,7 @@
         updateYarnStockTip();
     };
 
-    // 顯示選定客戶與紗種的總進紗量提示
+    // 顯示選定客戶與紗種的總進紗量提示（欄位：customer, type, weight）
     window.updateYarnStockTip = function() {
         const custName = document.getElementById("customerName").value.trim();
         const yarnType = document.getElementById("yarnType").value.trim();
@@ -555,9 +556,9 @@
         let recordCount = 0;
 
         Object.values(yarnDataMap).forEach(item => {
-            if (item.customerName && item.customerName.trim() === custName &&
-                item.yarnType && item.yarnType.trim() === yarnType) {
-                totalWeight += parseFloat(item.yarnWeight) || 0;
+            if (item.customer && item.customer.trim() === custName &&
+                item.type && item.type.trim() === yarnType) {
+                totalWeight += parseFloat(item.weight) || 0;
                 recordCount++;
             }
         });
