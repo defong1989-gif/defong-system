@@ -342,12 +342,13 @@
 
                 <div class="form-group">
                     <label for="packageCount">件數</label>
-                    <input type="number" step="0.1" id="packageCount" placeholder="例如：10" oninput="autoCalcBoxCount()">
+                    <!-- 修改 step 為 0.01 支援兩位小數 -->
+                    <input type="number" step="0.01" id="packageCount" placeholder="例如：1.25" oninput="autoCalcBoxCount()">
                 </div>
 
                 <div class="form-group">
                     <label for="boxCount">箱數</label>
-                    <input type="number" step="0.1" id="boxCount" placeholder="例如：40" oninput="autoCalcPkgCount()">
+                    <input type="number" step="0.01" id="boxCount" placeholder="例如：40" oninput="autoCalcPkgCount()">
                 </div>
 
                 <div class="form-group full-width">
@@ -491,17 +492,19 @@
         updateCustomerDropdowns();
     });
 
+    // 自動換算箱數（小數點後兩位）
     window.autoCalcBoxCount = function() {
         const pkg = parseFloat(document.getElementById("packageCount").value);
         if (!isNaN(pkg)) {
-            document.getElementById("boxCount").value = (pkg * 4).toFixed(1);
+            document.getElementById("boxCount").value = (pkg * 4).toFixed(2);
         }
     };
 
+    // 自動換算件數（小數點後兩位）
     window.autoCalcPkgCount = function() {
         const box = parseFloat(document.getElementById("boxCount").value);
         if (!isNaN(box)) {
-            document.getElementById("packageCount").value = (box / 4).toFixed(1);
+            document.getElementById("packageCount").value = (box / 4).toFixed(2);
         }
     };
 
@@ -606,8 +609,8 @@
         });
 
         document.getElementById("statCount").innerText = currentRenderedYarn.length;
-        document.getElementById("statPkg").innerText = totalPkg.toFixed(1);
-        document.getElementById("statBox").innerText = totalBox.toFixed(1);
+        document.getElementById("statPkg").innerText = totalPkg.toFixed(2); // 改為保留兩位小數
+        document.getElementById("statBox").innerText = totalBox.toFixed(2);
         document.getElementById("statWeight").innerText = totalWeight.toFixed(2);
 
         if (currentRenderedYarn.length === 0) {
@@ -616,8 +619,8 @@
         }
 
         currentRenderedYarn.forEach(item => {
-            const pkg = item.packageCount ? `${item.packageCount} 件` : "-";
-            const box = item.boxCount ? `${item.boxCount} 箱` : "-";
+            const pkg = (item.packageCount !== "" && item.packageCount !== undefined) ? `${item.packageCount} 件` : "-";
+            const box = (item.boxCount !== "" && item.boxCount !== undefined) ? `${item.boxCount} 箱` : "-";
 
             const imgHtml = item.image 
                 ? `<img src="${item.image}" class="img-preview" onclick="openModal('${item.image}')">`
@@ -679,8 +682,8 @@
         document.getElementById("customerName").value = item.customerName || "";
         document.getElementById("yarnType").value = item.yarnType || "";
         document.getElementById("yarnSupplier").value = item.yarnSupplier || item.yarnBatch || "";
-        document.getElementById("packageCount").value = item.packageCount || "";
-        document.getElementById("boxCount").value = item.boxCount || "";
+        document.getElementById("packageCount").value = item.packageCount ?? "";
+        document.getElementById("boxCount").value = item.boxCount ?? "";
         document.getElementById("yarnWeight").value = item.yarnWeight || "";
         document.getElementById("yarnMill").value = item.yarnMill || "";
         document.getElementById("remark").value = item.remark || "";
@@ -733,8 +736,8 @@
             "客戶名稱": item.customerName,
             "紗種": item.yarnType,
             "紗商": item.yarnSupplier || item.yarnBatch || "",
-            "件數": item.packageCount || "",
-            "箱數": item.boxCount || "",
+            "件數": item.packageCount ?? "",
+            "箱數": item.boxCount ?? "",
             "紗量 (kg)": item.yarnWeight,
             "導紗廠": item.yarnMill || "",
             "備註": item.remark || ""
@@ -797,8 +800,8 @@
                     "客戶名稱": item.customerName,
                     "紗種": item.yarnType,
                     "紗商": item.yarnSupplier || item.yarnBatch || "",
-                    "件數": item.packageCount || "",
-                    "箱數": item.boxCount || "",
+                    "件數": item.packageCount ?? "",
+                    "箱數": item.boxCount ?? "",
                     "紗量 (kg)": item.yarnWeight,
                     "導紗廠": item.yarnMill || "",
                     "備註": item.remark || ""
@@ -808,8 +811,8 @@
             monthlySummary.push({
                 "月份": `${m} 月`,
                 "筆數": monthData.length,
-                "總件數": mPkg ? mPkg.toFixed(1) : 0,
-                "總箱數": mBox ? mBox.toFixed(1) : 0,
+                "總件數": mPkg ? mPkg.toFixed(2) : 0, // 改為保留兩位小數
+                "總箱數": mBox ? mBox.toFixed(2) : 0,
                 "總紗量 (kg)": mWeight ? mWeight.toFixed(2) : 0
             });
 
