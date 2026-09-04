@@ -206,13 +206,35 @@
 
         .filter-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr auto;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
             gap: 12px;
             align-items: end;
         }
 
-        @media (max-width: 768px) {
-            .filter-grid { grid-template-columns: 1fr; }
+        .action-btns {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            grid-column: span 2;
+            margin-top: 8px;
+        }
+
+        .stats-bar {
+            display: flex;
+            gap: 16px;
+            background: #f1f5f9;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-top: 12px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-main);
+            flex-wrap: wrap;
+        }
+
+        .stats-item span {
+            color: var(--primary);
+            font-size: 1.05rem;
         }
 
         .table-responsive {
@@ -297,16 +319,8 @@
 
             <div class="form-grid">
                 
-                <div class="form-group">
-                    <label for="actionType">進紗 (進/出類別)</label>
-                    <select id="actionType" required>
-                        <option value="進紗">🟢 進紗 (增加)</option>
-                        <option value="出紗/退紗">🔴 出紗/退紗 (扣減)</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label for="recordDate">日期</label>
+                <div class="form-group full-width">
+                    <label for="recordDate">進紗日期</label>
                     <input type="date" id="recordDate" required>
                 </div>
 
@@ -370,7 +384,7 @@
     <div class="right-column">
         
         <div class="card">
-            <h2 class="card-title">🔍 紗帳紀錄查詢與篩選</h2>
+            <h2 class="card-title">🔍 紗帳紀錄查詢與統計</h2>
             <div class="filter-grid">
                 <div class="form-group">
                     <label for="filterCustomer">依客戶篩選</label>
@@ -379,12 +393,26 @@
                     </select>
                 </div>
                 <div class="form-group">
+                    <label for="filterMonth">進紗月份篩選</label>
+                    <input type="month" id="filterMonth" onchange="renderTable()">
+                </div>
+                <div class="form-group">
                     <label for="filterKeyword">關鍵字搜尋</label>
                     <input type="text" id="filterKeyword" placeholder="搜尋紗種、紗商、導紗廠..." oninput="renderTable()">
                 </div>
-                <div>
-                    <button class="btn-excel" onclick="exportYarnToExcel()">📄 匯出 Excel 報表</button>
+                
+                <div class="action-btns">
+                    <button class="btn-excel" onclick="exportYarnToExcel()">📄 匯出當前視圖 Excel</button>
+                    <button class="btn-excel" style="background-color:#0284c7;" onclick="exportYearlyMonthlyExcel()">📊 匯出整年分月 Excel 報表</button>
                 </div>
+            </div>
+
+            <!-- 月份/條件 統計結果 -->
+            <div class="stats-bar" id="statsBar">
+                <div class="stats-item">總筆數：<span id="statCount">0</span> 筆</div>
+                <div class="stats-item">總件數：<span id="statPkg">0</span> 件</div>
+                <div class="stats-item">總箱數：<span id="statBox">0</span> 箱</div>
+                <div class="stats-item">總紗量：<span id="statWeight">0</span> kg</div>
             </div>
         </div>
 
@@ -394,8 +422,7 @@
                 <table>
                     <thead>
                         <tr>
-                            <th>進紗</th>
-                            <th>日期</th>
+                            <th>進紗日期</th>
                             <th>客戶名稱</th>
                             <th>紗種</th>
                             <th>紗商</th>
@@ -409,7 +436,7 @@
                         </tr>
                     </thead>
                     <tbody id="yarnTableBody">
-                        <tr><td colspan="12" class="no-data">載入紗帳資料中...</td></tr>
+                        <tr><td colspan="11" class="no-data">載入紗帳資料中...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -542,6 +569,7 @@
 
     window.renderTable = function() {
         const selectedCustomer = document.getElementById("filterCustomer").value;
+        const selectedMonth = document.getElementById("filterMonth").value; // YYYY-MM
         const keyword = document.getElementById("filterKeyword").value.toLowerCase().trim();
         const tbody = document.getElementById("yarnTableBody");
         tbody.innerHTML = "";
@@ -551,6 +579,7 @@
         Object.keys(yarnDataMap).forEach(key => {
             const item = yarnDataMap[key];
             const matchCustomer = !selectedCustomer || item.customerName === selectedCustomer;
+            const matchMonth = !selectedMonth || (item.recordDate && item.recordDate.startsWith(selectedMonth));
             const matchKeyword = !keyword ||
                 (item.customerName && item.customerName.toLowerCase().includes(keyword)) ||
                 (item.yarnType && item.yarnType.toLowerCase().includes(keyword)) ||
@@ -558,21 +587,35 @@
                 (item.yarnMill && item.yarnMill.toLowerCase().includes(keyword)) ||
                 (item.remark && item.remark.toLowerCase().includes(keyword));
 
-            if (matchCustomer && matchKeyword) {
+            if (matchCustomer && matchMonth && matchKeyword) {
                 currentRenderedYarn.push({ key, ...item });
             }
         });
 
         currentRenderedYarn.sort((a,b) => new Date(b.recordDate) - new Date(a.recordDate));
 
+        // 計算統計數字
+        let totalPkg = 0;
+        let totalBox = 0;
+        let totalWeight = 0;
+
+        currentRenderedYarn.forEach(item => {
+            totalPkg += parseFloat(item.packageCount) || 0;
+            totalBox += parseFloat(item.boxCount) || 0;
+            totalWeight += parseFloat(item.yarnWeight) || 0;
+        });
+
+        document.getElementById("statCount").innerText = currentRenderedYarn.length;
+        document.getElementById("statPkg").innerText = totalPkg.toFixed(1);
+        document.getElementById("statBox").innerText = totalBox.toFixed(1);
+        document.getElementById("statWeight").innerText = totalWeight.toFixed(2);
+
         if (currentRenderedYarn.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="12" class="no-data">目前無符合條件的紗帳資料</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="11" class="no-data">目前無符合條件的紗帳資料</td></tr>';
             return;
         }
 
         currentRenderedYarn.forEach(item => {
-            const isImport = item.actionType === "進紗";
-            const badgeClass = isImport ? "color:#10b981; font-weight:700;" : "color:#ef4444; font-weight:700;";
             const pkg = item.packageCount ? `${item.packageCount} 件` : "-";
             const box = item.boxCount ? `${item.boxCount} 箱` : "-";
 
@@ -582,7 +625,6 @@
 
             const row = document.createElement("tr");
             row.innerHTML = `
-                <td><span style="${badgeClass}">${item.actionType || "進紗"}</span></td>
                 <td><strong>${item.recordDate || "-"}</strong></td>
                 <td><strong>${item.customerName || "-"}</strong></td>
                 <td>${item.yarnType || "-"}</td>
@@ -609,7 +651,6 @@
         const newImageBase64 = document.getElementById("imageDataBase64").value;
 
         const yarnData = {
-            actionType: document.getElementById("actionType").value,
             recordDate: document.getElementById("recordDate").value,
             customerName: document.getElementById("customerName").value.trim(),
             yarnType: document.getElementById("yarnType").value.trim(),
@@ -634,7 +675,6 @@
     window.editYarn = function(key) {
         const item = yarnDataMap[key];
         document.getElementById("editKey").value = key;
-        document.getElementById("actionType").value = item.actionType || "進紗";
         document.getElementById("recordDate").value = item.recordDate || "";
         document.getElementById("customerName").value = item.customerName || "";
         document.getElementById("yarnType").value = item.yarnType || "";
@@ -681,6 +721,7 @@
         document.getElementById("imageModal").style.display = "none";
     };
 
+    // 匯出目前篩選結果
     window.exportYarnToExcel = function() {
         if (currentRenderedYarn.length === 0) {
             alert("目前沒有紗帳紀錄可供匯出！");
@@ -688,8 +729,7 @@
         }
 
         const excelData = currentRenderedYarn.map(item => ({
-            "進紗": item.actionType || "進紗",
-            "日期": item.recordDate,
+            "進紗日期": item.recordDate,
             "客戶名稱": item.customerName,
             "紗種": item.yarnType,
             "紗商": item.yarnSupplier || item.yarnBatch || "",
@@ -702,10 +742,89 @@
 
         const worksheet = XLSX.utils.json_to_sheet(excelData);
         const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, "紗帳進出報表");
+        XLSX.utils.book_append_sheet(workbook, worksheet, "紗帳報表");
 
         const custLabel = document.getElementById("filterCustomer").value || "全部客戶";
-        XLSX.writeFile(workbook, `德峰紗帳報表_${custLabel}.xlsx`);
+        const monthLabel = document.getElementById("filterMonth").value || "全時期";
+        XLSX.writeFile(workbook, `德峰紗帳報表_${custLabel}_${monthLabel}.xlsx`);
+    };
+
+    // 匯出整年分月 Excel 報表
+    window.exportYearlyMonthlyExcel = function() {
+        const selectedCustomer = document.getElementById("filterCustomer").value;
+        const filterMonthVal = document.getElementById("filterMonth").value;
+        let targetYear = filterMonthVal ? filterMonthVal.split("-")[0] : new Date().getFullYear().toString();
+
+        const yearInput = prompt("請輸入要匯出的年份（YYYY）：", targetYear);
+        if (!yearInput) return;
+        targetYear = yearInput.trim();
+
+        // 收集該年份所有符合客戶資格的資料
+        const yearRecords = [];
+        Object.values(yarnDataMap).forEach(item => {
+            const matchCustomer = !selectedCustomer || item.customerName === selectedCustomer;
+            const matchYear = item.recordDate && item.recordDate.startsWith(targetYear);
+            if (matchCustomer && matchYear) {
+                yearRecords.push(item);
+            }
+        });
+
+        if (yearRecords.length === 0) {
+            alert(`在 ${targetYear} 年找不到符合條件的紗帳紀錄！`);
+            return;
+        }
+
+        const workbook = XLSX.utils.book_new();
+
+        // 按月份拆分 (01 ~ 12)
+        const monthlySummary = [];
+
+        for (let m = 1; m <= 12; m++) {
+            const monthStr = m.toString().padStart(2, '0');
+            const monthKey = `${targetYear}-${monthStr}`;
+
+            const monthData = yearRecords.filter(item => item.recordDate && item.recordDate.startsWith(monthKey));
+            monthData.sort((a,b) => new Date(a.recordDate) - new Date(b.recordDate));
+
+            let mPkg = 0, mBox = 0, mWeight = 0;
+
+            const excelRows = monthData.map(item => {
+                mPkg += parseFloat(item.packageCount) || 0;
+                mBox += parseFloat(item.boxCount) || 0;
+                mWeight += parseFloat(item.yarnWeight) || 0;
+                return {
+                    "進紗日期": item.recordDate,
+                    "客戶名稱": item.customerName,
+                    "紗種": item.yarnType,
+                    "紗商": item.yarnSupplier || item.yarnBatch || "",
+                    "件數": item.packageCount || "",
+                    "箱數": item.boxCount || "",
+                    "紗量 (kg)": item.yarnWeight,
+                    "導紗廠": item.yarnMill || "",
+                    "備註": item.remark || ""
+                };
+            });
+
+            monthlySummary.push({
+                "月份": `${m} 月`,
+                "筆數": monthData.length,
+                "總件數": mPkg ? mPkg.toFixed(1) : 0,
+                "總箱數": mBox ? mBox.toFixed(1) : 0,
+                "總紗量 (kg)": mWeight ? mWeight.toFixed(2) : 0
+            });
+
+            if (excelRows.length > 0) {
+                const worksheet = XLSX.utils.json_to_sheet(excelRows);
+                XLSX.utils.book_append_sheet(workbook, worksheet, `${monthStr}月`);
+            }
+        }
+
+        // 新增一份「全年度統計」放在第一個分頁
+        const summaryWorksheet = XLSX.utils.json_to_sheet(monthlySummary);
+        XLSX.utils.book_append_sheet(workbook, summaryWorksheet, "全年度統計摘要", true);
+
+        const custLabel = selectedCustomer || "全部客戶";
+        XLSX.writeFile(workbook, `德峰紗帳分月報表_${targetYear}年_${custLabel}.xlsx`);
     };
 </script>
 
