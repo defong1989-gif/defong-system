@@ -725,6 +725,35 @@
         document.getElementById("imageModal").style.display = "none";
     };
 
+    // 輔助函數：自動計算 Sheet 欄位寬度（防止 Excel 字體被覆蓋）
+    function setWorksheetColWidths(worksheet, jsonData) {
+        if (!jsonData || jsonData.length === 0) return;
+        
+        const keys = Object.keys(jsonData[0]);
+        const colWidths = keys.map(key => {
+            // 計算標頭長度 (中文字約佔 2 個字元長度)
+            let maxLen = 0;
+            for (let char of key) {
+                maxLen += char.charCodeAt(0) > 255 ? 2.1 : 1.1;
+            }
+
+            // 計算資料內文最長度
+            jsonData.forEach(row => {
+                const val = row[key] !== null && row[key] !== undefined ? String(row[key]) : "";
+                let valLen = 0;
+                for (let char of val) {
+                    valLen += char.charCodeAt(0) > 255 ? 2.1 : 1.1;
+                }
+                if (valLen > maxLen) maxLen = valLen;
+            });
+
+            // 設定最小與最大寬度保護機制
+            return { wch: Math.min(Math.max(Math.ceil(maxLen) + 3, 10), 60) };
+        });
+
+        worksheet['!cols'] = colWidths;
+    }
+
     // 匯出目前篩選結果
     window.exportYarnToExcel = function() {
         if (currentRenderedYarn.length === 0) {
@@ -733,18 +762,20 @@
         }
 
         const excelData = currentRenderedYarn.map(item => ({
-            "進紗日期": item.recordDate,
-            "客戶名稱": item.customerName,
-            "紗種": item.yarnType,
+            "進紗日期": item.recordDate || "",
+            "客戶名稱": item.customerName || "",
+            "紗種": item.yarnType || "",
             "紗商": item.yarnSupplier || item.yarnBatch || "",
             "件數": item.packageCount ?? "",
             "箱數": item.boxCount ?? "",
-            "紗量 (kg)": item.yarnWeight,
+            "紗量 (kg)": item.yarnWeight || 0,
             "導紗廠": item.yarnMill || "",
             "備註": item.remark || ""
         }));
 
         const worksheet = XLSX.utils.json_to_sheet(excelData);
+        setWorksheetColWidths(worksheet, excelData); // 自動設定欄寬
+
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, "紗帳報表");
 
@@ -797,13 +828,13 @@
                 mBox += parseFloat(item.boxCount) || 0;
                 mWeight += parseFloat(item.yarnWeight) || 0;
                 return {
-                    "進紗日期": item.recordDate,
-                    "客戶名稱": item.customerName,
-                    "紗種": item.yarnType,
+                    "進紗日期": item.recordDate || "",
+                    "客戶名稱": item.customerName || "",
+                    "紗種": item.yarnType || "",
                     "紗商": item.yarnSupplier || item.yarnBatch || "",
                     "件數": item.packageCount ?? "",
                     "箱數": item.boxCount ?? "",
-                    "紗量 (kg)": item.yarnWeight,
+                    "紗量 (kg)": item.yarnWeight || 0,
                     "導紗廠": item.yarnMill || "",
                     "備註": item.remark || ""
                 };
@@ -819,12 +850,14 @@
 
             if (excelRows.length > 0) {
                 const worksheet = XLSX.utils.json_to_sheet(excelRows);
+                setWorksheetColWidths(worksheet, excelRows); // 自動設定欄寬
                 monthSheets.push({ name: `${monthStr}月`, sheet: worksheet });
             }
         }
 
         // 先把「全年度統計摘要」作為第一個工作表 append 進去
         const summaryWorksheet = XLSX.utils.json_to_sheet(monthlySummary);
+        setWorksheetColWidths(summaryWorksheet, monthlySummary); // 自動設定欄寬
         XLSX.utils.book_append_sheet(workbook, summaryWorksheet, "全年度統計摘要");
 
         // 依序 append 各月份工作表
