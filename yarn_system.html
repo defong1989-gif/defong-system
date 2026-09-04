@@ -323,7 +323,7 @@
                 
                 <div class="form-group full-width">
                     <label for="customerName">客戶名稱</label>
-                    <input type="text" id="customerName" list="customerDatalist" required placeholder="點選選單或輸入名稱..." oninput="updateStockSummary()" onfocus="this.select()">
+                    <input type="text" id="customerName" list="customerDatalist" required placeholder="點選選單或輸入名稱..." oninput="updateStockSummary()" onchange="updateStockSummary()" onfocus="this.select()">
                     <datalist id="customerDatalist"></datalist>
                 </div>
 
@@ -367,7 +367,7 @@
 
                 <div class="form-group full-width">
                     <label for="boxCount">箱數 (自動計算：1件 = 4箱)</label>
-                    <input type="number" step="0.1" id="boxCount" placeholder="例如：40">
+                    <input type="number" step="0.1" id="boxCount" placeholder="例如：40" oninput="autoCalcPkgCount()">
                 </div>
 
                 <div class="form-group full-width">
@@ -494,6 +494,13 @@
         const pkg = parseFloat(document.getElementById("packageCount").value);
         if (!isNaN(pkg)) {
             document.getElementById("boxCount").value = (pkg * 4).toFixed(1);
+        }
+    };
+
+    window.autoCalcPkgCount = function() {
+        const box = parseFloat(document.getElementById("boxCount").value);
+        if (!isNaN(box)) {
+            document.getElementById("packageCount").value = (box / 4).toFixed(1);
         }
     };
 
@@ -675,6 +682,7 @@
         e.preventDefault();
 
         const editKey = document.getElementById("editKey").value;
+        const newImageBase64 = document.getElementById("imageDataBase64").value;
 
         const yarnData = {
             customerName: document.getElementById("customerName").value.trim(),
@@ -686,7 +694,8 @@
             boxCount: document.getElementById("boxCount").value ? parseFloat(document.getElementById("boxCount").value) : "",
             yarnBatch: document.getElementById("yarnBatch").value.trim(),
             remark: document.getElementById("remark").value.trim(),
-            image: document.getElementById("imageDataBase64").value || ""
+            // 修正照片被清空問題
+            image: newImageBase64 || (editKey && yarnDataMap[editKey] ? (yarnDataMap[editKey].image || "") : "")
         };
 
         if (!editKey) {
@@ -710,7 +719,7 @@
         document.getElementById("boxCount").value = item.boxCount || "";
         document.getElementById("yarnBatch").value = item.yarnBatch || "";
         document.getElementById("remark").value = item.remark || "";
-        document.getElementById("imageDataBase64").value = item.image || "";
+        document.getElementById("imageDataBase64").value = ""; // 清空上傳暫存，若未再選擇新圖會自動保留舊圖
 
         document.getElementById("formTitle").innerText = "✏️ 編輯紗帳紀錄";
         document.getElementById("saveBtn").innerText = "更新進出紀錄";
@@ -721,7 +730,9 @@
     };
 
     window.deleteYarn = function(key) {
-        if (confirm("確定要刪除這筆紗帳紀錄嗎？")) {
+        const item = yarnDataMap[key];
+        const label = item ? `${item.customerName} - ${item.yarnType}` : "這筆";
+        if (confirm(`確定要刪除「${label}」的紗帳紀錄嗎？`)) {
             remove(ref(db, `yarnRecords/${key}`));
         }
     };
