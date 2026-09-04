@@ -96,7 +96,7 @@
         .main-container {
             padding: 20px 24px;
             display: grid;
-            grid-template-columns: 420px minmax(0, 1fr);
+            grid-template-columns: 460px minmax(0, 1fr);
             gap: 20px;
             align-items: start;
         }
@@ -165,6 +165,33 @@
             box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
         }
 
+        /* 紗種選擇專用樣式 */
+        .yarn-selection-box {
+            background: #f1f5f9;
+            border: 1px dashed var(--border);
+            border-radius: 8px;
+            padding: 10px;
+            max-height: 140px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .yarn-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            cursor: pointer;
+        }
+
+        .yarn-item input[type="checkbox"] {
+            width: auto;
+            margin: 0;
+            cursor: pointer;
+        }
+
         .btn-group {
             display: flex;
             gap: 10px;
@@ -224,20 +251,20 @@
             border-collapse: separate;
             border-spacing: 0;
             text-align: left;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
         }
 
         th {
             background-color: #f8fafc;
             color: var(--text-sub);
             font-weight: 600;
-            padding: 10px 12px;
+            padding: 10px 10px;
             border-bottom: 2px solid var(--border);
             white-space: nowrap;
         }
 
         td {
-            padding: 10px 12px;
+            padding: 10px 10px;
             border-bottom: 1px solid var(--border);
             color: var(--text-main);
             vertical-align: middle;
@@ -271,7 +298,7 @@
                 <div class="form-grid">
                     <div class="form-group full-width">
                         <label for="customerName">客戶名稱</label>
-                        <input type="text" id="customerName" list="customerDatalist" required placeholder="點選選單或輸入名稱..." onfocus="this.select()">
+                        <input type="text" id="customerName" list="customerDatalist" required placeholder="點選選單或輸入名稱..." onchange="onCustomerChange()" oninput="onCustomerChange()" onfocus="this.select()">
                         <datalist id="customerDatalist"></datalist>
                     </div>
 
@@ -285,28 +312,66 @@
                         <input type="date" id="deliveryDate">
                     </div>
 
-                    <div class="form-group full-width">
+                    <div class="form-group">
                         <label for="fabricType">布種 / 規格</label>
-                        <input type="text" id="fabricType" required placeholder="例如：雙面單面布、網眼布">
+                        <input type="text" id="fabricType" required placeholder="例如：雙面單面布">
                     </div>
 
                     <div class="form-group">
-                        <label for="quantity">數量 (條/匹)</label>
+                        <label for="widthWeight">幅寬 / 碼重</label>
+                        <input type="text" id="widthWeight" placeholder="例如：60\" / 220g">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="machineInch">機台吋數</label>
+                        <input type="text" id="machineInch" placeholder="例如：30吋">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="machineNeedle">機台針數</label>
+                        <input type="text" id="machineNeedle" placeholder="例如：24針">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="feederCount">口數</label>
+                        <input type="text" id="feederCount" list="feederOptions" placeholder="選擇或自行輸入">
+                        <datalist id="feederOptions">
+                            <option value="60"></option>
+                            <option value="88"></option>
+                            <option value="90"></option>
+                            <option value="96"></option>
+                            <option value="108"></option>
+                            <option value="120"></option>
+                        </datalist>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="quantity">數量 (kg)</label>
                         <input type="number" step="0.1" id="quantity" required placeholder="例如：100">
                     </div>
 
+                    <!-- 紗種區塊 (連動紗帳系統) -->
+                    <div class="form-group full-width">
+                        <label>紗種 (勾選該客戶庫存紗種)</label>
+                        <div id="yarnCheckboxGroup" class="yarn-selection-box">
+                            <span style="color: #94a3b8; font-size: 0.85rem;">請先輸入或選擇「客戶名稱」以載入可用紗種...</span>
+                        </div>
+                        <input type="text" id="yarnTypeCustom" placeholder="或手動輸入紗種補充..." style="margin-top: 4px;">
+                    </div>
+
                     <div class="form-group">
-                        <label for="unit">單位</label>
-                        <select id="unit">
-                            <option value="條">條</option>
-                            <option value="匹">匹</option>
-                            <option value="kg">kg</option>
-                        </select>
+                        <label for="color">顏色</label>
+                        <input type="text" id="color" placeholder="例如：黑色、藏青">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="dyeingFactory">染整廠</label>
+                        <input type="text" id="dyeingFactory" placeholder="例如：德峰染廠">
                     </div>
 
                     <div class="form-group full-width">
                         <label for="remark">備註說明</label>
-                        <textarea id="remark" rows="3" placeholder="加工要求、顏色標記等..."></textarea>
+                        <textarea id="remark" rows="3" placeholder="加工要求、其他細節等..."></textarea>
                     </div>
                 </div>
 
@@ -330,7 +395,7 @@
                     </div>
                     <div class="form-group">
                         <label for="filterKeyword">關鍵字搜尋</label>
-                        <input type="text" id="filterKeyword" placeholder="搜尋布種、備註..." oninput="renderTable()">
+                        <input type="text" id="filterKeyword" placeholder="搜尋布種、紗種、顏色、備註..." oninput="renderTable()">
                     </div>
                     <div>
                         <button class="btn-excel" onclick="exportOrdersToExcel()">📄 匯出 Excel 訂單報表</button>
@@ -345,16 +410,18 @@
                         <thead>
                             <tr>
                                 <th>訂單日期</th>
-                                <th>預計交期</th>
                                 <th>客戶名稱</th>
-                                <th>布種 / 規格</th>
-                                <th>數量</th>
+                                <th>布種 / 幅寬碼重</th>
+                                <th>機台規格</th>
+                                <th>紗種</th>
+                                <th>數量(kg)</th>
+                                <th>顏色/染廠</th>
                                 <th>備註</th>
                                 <th>操作</th>
                             </tr>
                         </thead>
                         <tbody id="orderTableBody">
-                            <tr><td colspan="7" class="no-data">載入訂單資料中...</td></tr>
+                            <tr><td colspan="9" class="no-data">載入訂單資料中...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -401,6 +468,7 @@
     onValue(yarnRef, (snapshot) => {
         yarnDataMap = snapshot.val() || {};
         updateCustomerDropdowns();
+        onCustomerChange(); // 當紗帳資料更新時同步刷新選單
     });
 
     function updateCustomerDropdowns() {
@@ -430,6 +498,50 @@
         filterSelect.value = currentVal;
     }
 
+    // 依客戶連動紗帳庫存
+    window.onCustomerChange = function() {
+        const custName = document.getElementById("customerName").value.trim();
+        const container = document.getElementById("yarnCheckboxGroup");
+
+        if (!custName) {
+            container.innerHTML = '<span style="color: #94a3b8; font-size: 0.85rem;">請先輸入或選擇「客戶名稱」以載入可用紗種...</span>';
+            return;
+        }
+
+        // 計算該客戶在紗帳庫存系統中的剩餘紗種
+        const yarnStockMap = {};
+        Object.values(yarnDataMap).forEach(item => {
+            if (item.customerName && item.customerName.trim() === custName && item.yarnType) {
+                const type = item.yarnType.trim();
+                const weight = parseFloat(item.weight) || 0;
+                // 進紗為正，出紗為負
+                const sign = (item.type === '出紗' || item.type === 'OUT') ? -1 : 1;
+                yarnStockMap[type] = (yarnStockMap[type] || 0) + (weight * sign);
+            }
+        });
+
+        // 篩選庫存量 > 0 的紗種
+        const availableYarns = Object.keys(yarnStockMap).filter(type => yarnStockMap[type] > 0);
+
+        if (availableYarns.length === 0) {
+            container.innerHTML = `<span style="color: #94a3b8; font-size: 0.85rem;">該客戶目前無紗庫存紀錄</span>`;
+            return;
+        }
+
+        // 記錄目前已被勾選的項目 (若有)
+        const selectedValues = Array.from(container.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
+
+        container.innerHTML = "";
+        availableYarns.forEach(y => {
+            const label = document.createElement("label");
+            label.className = "yarn-item";
+            const checked = selectedValues.includes(y) ? "checked" : "";
+            const stockQty = Math.round(yarnStockMap[y] * 100) / 100;
+            label.innerHTML = `<input type="checkbox" value="${y}" ${checked}> ${y} <span style="color:#64748b; font-size:0.75rem;">(庫存: ${stockQty}kg)</span>`;
+            container.appendChild(label);
+        });
+    };
+
     window.renderTable = function() {
         const selectedCustomer = document.getElementById("filterCustomer").value;
         const keyword = document.getElementById("filterKeyword").value.toLowerCase().trim();
@@ -444,6 +556,9 @@
             const matchKeyword = !keyword ||
                 (item.customerName && item.customerName.toLowerCase().includes(keyword)) ||
                 (item.fabricType && item.fabricType.toLowerCase().includes(keyword)) ||
+                (item.yarnType && item.yarnType.toLowerCase().includes(keyword)) ||
+                (item.color && item.color.toLowerCase().includes(keyword)) ||
+                (item.dyeingFactory && item.dyeingFactory.toLowerCase().includes(keyword)) ||
                 (item.remark && item.remark.toLowerCase().includes(keyword));
 
             if (matchCustomer && matchKeyword) {
@@ -454,18 +569,34 @@
         currentRenderedOrders.sort((a,b) => new Date(b.orderDate) - new Date(a.orderDate));
 
         if (currentRenderedOrders.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" class="no-data">目前無符合條件的訂單資料</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="9" class="no-data">目前無符合條件的訂單資料</td></tr>';
             return;
         }
 
         currentRenderedOrders.forEach(item => {
             const row = document.createElement("tr");
+
+            // 機台規格整合顯示
+            const specs = [
+                item.machineInch ? `${item.machineInch}` : '',
+                item.machineNeedle ? `${item.machineNeedle}` : '',
+                item.feederCount ? `${item.feederCount}口` : ''
+            ].filter(Boolean).join(' / ') || '-';
+
+            // 顏色與染廠整合顯示
+            const colorDye = [
+                item.color || '',
+                item.dyeingFactory ? `(${item.dyeingFactory})` : ''
+            ].filter(Boolean).join(' ') || '-';
+
             row.innerHTML = `
                 <td><strong>${item.orderDate || "-"}</strong></td>
-                <td>${item.deliveryDate || "-"}</td>
                 <td><strong>${item.customerName}</strong></td>
-                <td>${item.fabricType}</td>
-                <td><strong>${item.quantity} ${item.unit || "條"}</strong></td>
+                <td>${item.fabricType || "-"}<br><small style="color:#64748b">${item.widthWeight || ""}</small></td>
+                <td>${specs}</td>
+                <td>${item.yarnType || "-"}</td>
+                <td><strong>${item.quantity} kg</strong></td>
+                <td>${colorDye}</td>
                 <td>${item.remark || "-"}</td>
                 <td>
                     <button class="btn-primary" style="padding: 4px 8px; font-size: 0.85rem;" onclick="editOrder('${item.key}')">編輯</button>
@@ -481,13 +612,26 @@
 
         const editKey = document.getElementById("editKey").value;
 
+        // 收集勾選的紗種
+        const checkedYarns = Array.from(document.querySelectorAll('#yarnCheckboxGroup input[type="checkbox"]:checked'))
+                                  .map(cb => cb.value);
+        const customYarn = document.getElementById("yarnTypeCustom").value.trim();
+        if (customYarn) checkedYarns.push(customYarn);
+        const finalYarnType = checkedYarns.join('、');
+
         const orderData = {
             customerName: document.getElementById("customerName").value.trim(),
             orderDate: document.getElementById("orderDate").value,
             deliveryDate: document.getElementById("deliveryDate").value,
             fabricType: document.getElementById("fabricType").value.trim(),
+            widthWeight: document.getElementById("widthWeight").value.trim(),
+            machineInch: document.getElementById("machineInch").value.trim(),
+            machineNeedle: document.getElementById("machineNeedle").value.trim(),
+            feederCount: document.getElementById("feederCount").value.trim(),
             quantity: parseFloat(document.getElementById("quantity").value) || 0,
-            unit: document.getElementById("unit").value,
+            yarnType: finalYarnType,
+            color: document.getElementById("color").value.trim(),
+            dyeingFactory: document.getElementById("dyeingFactory").value.trim(),
             remark: document.getElementById("remark").value.trim()
         };
 
@@ -504,12 +648,32 @@
         const item = orderDataMap[key];
         document.getElementById("editKey").value = key;
         document.getElementById("customerName").value = item.customerName;
+        onCustomerChange(); // 刷新紗種選項
+
         document.getElementById("orderDate").value = item.orderDate;
         document.getElementById("deliveryDate").value = item.deliveryDate || "";
-        document.getElementById("fabricType").value = item.fabricType;
+        document.getElementById("fabricType").value = item.fabricType || "";
+        document.getElementById("widthWeight").value = item.widthWeight || "";
+        document.getElementById("machineInch").value = item.machineInch || "";
+        document.getElementById("machineNeedle").value = item.machineNeedle || "";
+        document.getElementById("feederCount").value = item.feederCount || "";
         document.getElementById("quantity").value = item.quantity;
-        document.getElementById("unit").value = item.unit || "條";
+        document.getElementById("color").value = item.color || "";
+        document.getElementById("dyeingFactory").value = item.dyeingFactory || "";
         document.getElementById("remark").value = item.remark || "";
+
+        // 勾選對應的紗種
+        const selectedYarns = (item.yarnType || "").split('、');
+        const checkboxes = document.querySelectorAll('#yarnCheckboxGroup input[type="checkbox"]');
+        let remainingYarns = [...selectedYarns];
+
+        checkboxes.forEach(cb => {
+            if (selectedYarns.includes(cb.value)) {
+                cb.checked = true;
+                remainingYarns = remainingYarns.filter(y => y !== cb.value);
+            }
+        });
+        document.getElementById("yarnTypeCustom").value = remainingYarns.join('、');
 
         document.getElementById("formTitle").innerText = "✏️ 編輯訂單資料";
         document.getElementById("saveBtn").innerText = "更新訂單資料";
@@ -531,6 +695,7 @@
         document.getElementById("formTitle").innerText = "📝 新增訂單資料";
         document.getElementById("saveBtn").innerText = "儲存訂單資料";
         document.getElementById("cancelBtn").style.display = "none";
+        onCustomerChange();
     };
 
     window.exportOrdersToExcel = function() {
@@ -544,8 +709,14 @@
             "預計交期": item.deliveryDate || "",
             "客戶名稱": item.customerName,
             "布種/規格": item.fabricType,
-            "數量": item.quantity,
-            "單位": item.unit || "條",
+            "幅寬/碼重": item.widthWeight || "",
+            "機台吋數": item.machineInch || "",
+            "機台針數": item.machineNeedle || "",
+            "口數": item.feederCount || "",
+            "數量(kg)": item.quantity,
+            "紗種": item.yarnType || "",
+            "顏色": item.color || "",
+            "染整廠": item.dyeingFactory || "",
             "備註": item.remark || ""
         }));
 
