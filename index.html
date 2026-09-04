@@ -22,11 +22,40 @@
     let orderDataMap = {};
     let yarnDataMap = {};
     let currentRenderedOrders = [];
-    let savedCustomerValue = ""; // 用於紀錄 focus 前的客戶名稱
 
-    window.onload = function() {
-        document.getElementById("orderDate").valueAsDate = new Date();
-    };
+    window.addEventListener("DOMContentLoaded", () => {
+        const dateInput = document.getElementById("orderDate");
+        if (dateInput) dateInput.valueAsDate = new Date();
+
+        // 綁定客戶輸入框的事件 (安全穩定監聽)
+        const custInput = document.getElementById("customerName");
+        if (custInput) {
+            custInput.addEventListener("input", onCustomerChange);
+            custInput.addEventListener("change", onCustomerChange);
+            // 點擊輸入框時自動全選，方便快速切換客戶且不破壞選單
+            custInput.addEventListener("focus", function() {
+                this.select();
+            });
+        }
+
+        // 綁定按鈕與篩選元件
+        const filterCust = document.getElementById("filterCustomer");
+        if (filterCust) filterCust.addEventListener("change", renderTable);
+
+        const filterKey = document.getElementById("filterKeyword");
+        if (filterKey) filterKey.addEventListener("input", renderTable);
+
+        const exportBtn = document.getElementById("exportBtn");
+        if (exportBtn) exportBtn.addEventListener("click", exportOrdersToExcel);
+
+        const cancelBtn = document.getElementById("cancelBtn");
+        if (cancelBtn) cancelBtn.addEventListener("click", resetForm);
+
+        const orderForm = document.getElementById("orderForm");
+        if (orderForm) {
+            orderForm.addEventListener("submit", handleFormSubmit);
+        }
+    });
 
     // 監聽訂單資料
     onValue(orderRef, (snapshot) => {
@@ -38,7 +67,6 @@
     // 監聽紗帳進出資料
     onValue(yarnRef, (snapshot) => {
         yarnDataMap = snapshot.val() || {};
-        console.log("🔍 成功接收紗帳系統數據：", yarnDataMap);
         updateCustomerDropdowns();
         onCustomerChange();
     });
@@ -47,41 +75,47 @@
     function updateCustomerDropdowns() {
         const customers = new Set();
         
-        // 收集訂單客戶
+        // 收集訂單客戶 (欄位: customerName)
         Object.values(orderDataMap).forEach(i => {
-            if (i && i.customerName) customers.add(i.customerName.trim());
+            if (i && i.customerName) customers.add(String(i.customerName).trim());
         });
         
-        // 收集紗帳客戶 (兼顧多種欄位命名)
+        // 收集紗帳客戶 (對應紗帳系統欄位: customer)
         Object.values(yarnDataMap).forEach(i => {
             if (!i) return;
-            const cName = i.customerName || i.customer || i.client || i.clientName;
-            if (cName && typeof cName === 'string') customers.add(cName.trim());
+            const cName = i.customer || i.customerName;
+            if (cName) customers.add(String(cName).trim());
         });
 
         const sortedCustomers = Array.from(customers).filter(Boolean).sort();
 
+        // 更新 datalist 選單
         const datalist = document.getElementById("customerDatalist");
-        datalist.innerHTML = "";
-        sortedCustomers.forEach(c => {
-            const opt = document.createElement("option");
-            opt.value = c;
-            datalist.appendChild(opt);
-        });
+        if (datalist) {
+            datalist.innerHTML = "";
+            sortedCustomers.forEach(c => {
+                const opt = document.createElement("option");
+                opt.value = c;
+                datalist.appendChild(opt);
+            });
+        }
 
+        // 更新表格上方篩選客戶選單
         const filterSelect = document.getElementById("filterCustomer");
-        const currentVal = filterSelect.value;
-        filterSelect.innerHTML = '<option value="">-- 全部客戶 --</option>';
-        sortedCustomers.forEach(c => {
-            const opt = document.createElement("option");
-            opt.value = c;
-            opt.textContent = c;
-            filterSelect.appendChild(opt);
-        });
-        filterSelect.value = currentVal;
+        if (filterSelect) {
+            const currentVal = filterSelect.value;
+            filterSelect.innerHTML = '<option value="">-- 全部客戶 --</option>';
+            sortedCustomers.forEach(c => {
+                const opt = document.createElement("option");
+                opt.value = c;
+                opt.textContent = c;
+                filterSelect.appendChild(opt);
+            });
+            filterSelect.value = currentVal;
+        }
     }
 
-    // 依客戶連動紗帳庫存
+    // 當客戶名稱變動時，連動帶出該客戶在紗帳系統中的紗種
     function onCustomerChange() {
         const custInput = document.getElementById("customerName");
         const custName = custInput ? custInput.value.trim().toLowerCase() : "";
@@ -94,82 +128,61 @@
             return;
         }
 
-        // 計算該客戶在紗帳庫存系統中的剩餘紗種
+        // 統計該客戶在紗帳系統中的紗種與數量
         const yarnStockMap = {};
+
         Object.values(yarnDataMap).forEach(item => {
             if (!item) return;
 
-            // 兼顧不同的客戶欄位名稱
-            const itemCustomer = String(item.customerName || item.customer || item.client || item.clientName || '').trim().toLowerCase();
-            // 兼顧紗種欄位名稱
-            const type = String(item.yarnType || item.yarnName || item.yarn || item.type || '').trim();
+            // 抓取紗帳系統的客戶欄位 (i.customer)
+            const itemCustomer = String(item.customer || item.customerName || '').trim().toLowerCase();
+            // 抓取紗帳系統的紗種欄位 (i.yarnType)
+            const type = String(item.yarnType || item.yarn || '').trim();
 
             if (itemCustomer === custName && type) {
-                // 兼顧重量欄位名稱
-                const weight = parseFloat(item.weight || item.quantity || item.qty || item.amount || 0);
-
-                // 判斷是否為出紗/出庫/減量
-                const typeStr = String(item.type || item.action || item.status || item.transactionType || item.ioType || '').toUpperCase();
-                const isOut = typeStr.includes('出') || typeStr.includes('OUT') || typeStr.includes('減') || typeStr.includes('扣') || typeStr.includes('銷');
-
-                const sign = isOut ? -1 : 1;
-                yarnStockMap[type] = (yarnStockMap[type] || 0) + (weight * sign);
+                // 統計件數或箱數 (packageCount / boxCount)
+                const count = parseFloat(item.packageCount || item.boxCount || item.quantity || 1);
+                yarnStockMap[type] = (yarnStockMap[type] || 0) + count;
             }
         });
 
-        // 篩選庫存量 > 0 的紗種
-        const availableYarns = Object.keys(yarnStockMap).filter(type => yarnStockMap[type] > 0.01);
+        const availableYarns = Object.keys(yarnStockMap);
 
         if (availableYarns.length === 0) {
-            container.innerHTML = `<span style="color: #ef4444; font-size: 0.85rem;">⚠️ 客戶「${custInput.value.trim()}」目前無庫存紗種</span>`;
+            container.innerHTML = `<span style="color: #ef4444; font-size: 0.85rem;">⚠️ 客戶「${custInput.value.trim()}」目前紗帳系統中尚無資料</span>`;
             return;
         }
 
-        // 記錄目前已被勾選的項目
+        // 保留目前已經勾選的選項
         const selectedValues = Array.from(container.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
 
         container.innerHTML = "";
         availableYarns.forEach(y => {
             const label = document.createElement("label");
             label.className = "yarn-item";
+            label.style.display = "inline-flex";
+            label.style.alignItems = "center";
+            label.style.marginRight = "12px";
+            label.style.marginBottom = "6px";
+            label.style.cursor = "pointer";
+
             const checked = selectedValues.includes(y) ? "checked" : "";
-            const stockQty = Math.round(yarnStockMap[y] * 100) / 100;
-            label.innerHTML = `<input type="checkbox" value="${y}" ${checked}> ${y} <span style="color:#64748b; font-size:0.75rem;">(庫存: ${stockQty}kg)</span>`;
+            const totalQty = yarnStockMap[y];
+
+            label.innerHTML = `<input type="checkbox" value="${y}" ${checked} style="margin-right: 4px;"> ${y} <span style="color:#64748b; font-size:0.75rem; margin-left: 2px;">(${totalQty}件/箱)</span>`;
             container.appendChild(label);
         });
     }
 
-    // 監聽客戶名稱輸入框變動與點擊全選清單行為
-    const custInput = document.getElementById("customerName");
-    if (custInput) {
-        custInput.addEventListener("input", onCustomerChange);
-        custInput.addEventListener("change", onCustomerChange);
-        
-        // 點擊時清空內容以觸發 datalist 顯示完整列表，並全選內容
-        custInput.addEventListener("focus", function() {
-            savedCustomerValue = this.value;
-            this.value = ""; 
-        });
-
-        // 若離開輸入框時未選擇新內容，還原原值
-        custInput.addEventListener("blur", function() {
-            if (!this.value.trim() && savedCustomerValue) {
-                this.value = savedCustomerValue;
-            }
-            onCustomerChange();
-        });
-    }
-
-    // 監聽篩選條目
-    document.getElementById("filterCustomer").addEventListener("change", renderTable);
-    document.getElementById("filterKeyword").addEventListener("input", renderTable);
-    document.getElementById("exportBtn").addEventListener("click", exportOrdersToExcel);
-    document.getElementById("cancelBtn").addEventListener("click", resetForm);
-
+    // 渲染訂單列表
     function renderTable() {
-        const selectedCustomer = document.getElementById("filterCustomer").value;
-        const keyword = document.getElementById("filterKeyword").value.toLowerCase().trim();
+        const filterCustomer = document.getElementById("filterCustomer");
+        const filterKeyword = document.getElementById("filterKeyword");
+        const selectedCustomer = filterCustomer ? filterCustomer.value : "";
+        const keyword = filterKeyword ? filterKeyword.value.toLowerCase().trim() : "";
+
         const tbody = document.getElementById("orderTableBody");
+        if (!tbody) return;
         tbody.innerHTML = "";
 
         currentRenderedOrders = [];
@@ -195,7 +208,7 @@
         currentRenderedOrders.sort((a,b) => new Date(b.orderDate) - new Date(a.orderDate));
 
         if (currentRenderedOrders.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="9" class="no-data">目前無符合條件的訂單資料</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="9" class="no-data" style="text-align:center; padding: 20px; color: #94a3b8;">目前無符合條件的訂單資料</td></tr>';
             return;
         }
 
@@ -215,16 +228,16 @@
 
             row.innerHTML = `
                 <td><strong>${item.orderDate || "-"}</strong></td>
-                <td><strong>${item.customerName}</strong></td>
+                <td><strong>${item.customerName || "-"}</strong></td>
                 <td>${item.fabricType || "-"}<br><small style="color:#64748b">${item.widthWeight || ""}</small></td>
                 <td>${specs}</td>
                 <td>${item.yarnType || "-"}</td>
-                <td><strong>${item.quantity} kg</strong></td>
+                <td><strong>${item.quantity || 0} kg</strong></td>
                 <td>${colorDye}</td>
                 <td>${item.remark || "-"}</td>
                 <td>
                     <button class="btn-primary btn-edit" style="padding: 4px 8px; font-size: 0.85rem;" data-key="${item.key}">編輯</button>
-                    <button class="btn-danger btn-del" data-key="${item.key}">刪除</button>
+                    <button class="btn-danger btn-del" style="padding: 4px 8px; font-size: 0.85rem;" data-key="${item.key}">刪除</button>
                 </td>
             `;
             tbody.appendChild(row);
@@ -238,14 +251,16 @@
         });
     }
 
-    document.getElementById("orderForm").addEventListener("submit", function(e) {
+    // 處理表單提交
+    function handleFormSubmit(e) {
         e.preventDefault();
 
         const editKey = document.getElementById("editKey").value;
 
         const checkedYarns = Array.from(document.querySelectorAll('#yarnCheckboxGroup input[type="checkbox"]:checked'))
                                   .map(cb => cb.value);
-        const customYarn = document.getElementById("yarnTypeCustom").value.trim();
+        const customYarnInput = document.getElementById("yarnTypeCustom");
+        const customYarn = customYarnInput ? customYarnInput.value.trim() : "";
         if (customYarn) checkedYarns.push(customYarn);
         const finalYarnType = checkedYarns.join('、');
 
@@ -272,22 +287,24 @@
         }
 
         resetForm();
-    });
+    }
 
     function editOrder(key) {
         const item = orderDataMap[key];
+        if (!item) return;
+
         document.getElementById("editKey").value = key;
-        document.getElementById("customerName").value = item.customerName;
+        document.getElementById("customerName").value = item.customerName || "";
         onCustomerChange();
 
-        document.getElementById("orderDate").value = item.orderDate;
+        document.getElementById("orderDate").value = item.orderDate || "";
         document.getElementById("deliveryDate").value = item.deliveryDate || "";
         document.getElementById("fabricType").value = item.fabricType || "";
         document.getElementById("widthWeight").value = item.widthWeight || "";
         document.getElementById("machineInch").value = item.machineInch || "";
         document.getElementById("machineNeedle").value = item.machineNeedle || "";
         document.getElementById("feederCount").value = item.feederCount || "";
-        document.getElementById("quantity").value = item.quantity;
+        document.getElementById("quantity").value = item.quantity || 0;
         document.getElementById("color").value = item.color || "";
         document.getElementById("dyeingFactory").value = item.dyeingFactory || "";
         document.getElementById("remark").value = item.remark || "";
@@ -302,7 +319,9 @@
                 remainingYarns = remainingYarns.filter(y => y !== cb.value);
             }
         });
-        document.getElementById("yarnTypeCustom").value = remainingYarns.join('、');
+
+        const customInput = document.getElementById("yarnTypeCustom");
+        if (customInput) customInput.value = remainingYarns.join('、');
 
         document.getElementById("formTitle").innerText = "✏️ 編輯訂單資料";
         document.getElementById("saveBtn").innerText = "更新訂單資料";
@@ -318,9 +337,13 @@
     }
 
     function resetForm() {
-        document.getElementById("orderForm").reset();
+        const form = document.getElementById("orderForm");
+        if (form) form.reset();
         document.getElementById("editKey").value = "";
-        document.getElementById("orderDate").valueAsDate = new Date();
+        
+        const dateInput = document.getElementById("orderDate");
+        if (dateInput) dateInput.valueAsDate = new Date();
+
         document.getElementById("formTitle").innerText = "📝 新增訂單資料";
         document.getElementById("saveBtn").innerText = "儲存訂單資料";
         document.getElementById("cancelBtn").style.display = "none";
@@ -353,7 +376,8 @@
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, "訂單報表");
 
-        const custLabel = document.getElementById("filterCustomer").value || "全部客戶";
+        const custSelect = document.getElementById("filterCustomer");
+        const custLabel = (custSelect && custSelect.value) ? custSelect.value : "全部客戶";
         XLSX.writeFile(workbook, `德峰訂單報表_${custLabel}.xlsx`);
     }
 </script>
