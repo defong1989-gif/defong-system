@@ -8,7 +8,7 @@
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
         :root {
-            --primary: #2563eb;       /* 藍色主題 (紗帳系統) */
+            --primary: #2563eb;
             --primary-light: #3b82f6;
             --primary-hover: #1d4ed8;
             --success: #10b981;
@@ -39,7 +39,6 @@
             min-height: 100vh;
         }
 
-        /* 頂部主題列與跳轉按鈕 */
         .header {
             background: linear-gradient(135deg, var(--primary), var(--primary-light));
             color: white;
@@ -62,7 +61,6 @@
             margin: 0;
             font-size: 1.5rem;
             font-weight: 700;
-            letter-spacing: 1px;
         }
 
         .status-badge {
@@ -74,7 +72,6 @@
             font-weight: 600;
         }
 
-        /* 跨系統頁面跳轉按鈕 */
         .btn-switch-system {
             background-color: rgba(255, 255, 255, 0.2);
             color: white;
@@ -96,7 +93,6 @@
             box-shadow: 0 2px 8px rgba(0,0,0,0.15);
         }
 
-        /* 主要內容雙欄區域 */
         .main-container {
             padding: 20px 24px;
             display: grid;
@@ -115,10 +111,9 @@
             background: var(--card-bg);
             padding: 20px;
             border-radius: 12px;
-            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03);
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
             border: 1px solid rgba(226, 232, 240, 0.8);
             margin-bottom: 20px;
-            width: 100%;
         }
 
         .card-title {
@@ -136,7 +131,6 @@
             grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 12px;
             margin-bottom: 20px;
-            width: 100%;
         }
 
         .full-width {
@@ -147,7 +141,6 @@
             display: flex;
             flex-direction: column;
             gap: 6px;
-            width: 100%;
         }
 
         label {
@@ -163,7 +156,6 @@
             border-radius: 8px;
             font-size: 0.9rem;
             outline: none;
-            transition: all 0.2s;
             background-color: #f8fafc;
             box-sizing: border-box;
         }
@@ -174,15 +166,12 @@
             box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
         }
 
-        /* 統計提示卡片 */
         .summary-card {
             background-color: #eff6ff;
             border: 1px solid #bfdbfe;
             border-radius: 8px;
             padding: 12px;
             margin-bottom: 12px;
-            width: 100%;
-            box-sizing: border-box;
         }
 
         .summary-header {
@@ -206,7 +195,6 @@
         .btn-group {
             display: flex;
             gap: 10px;
-            width: 100%;
         }
 
         button {
@@ -242,13 +230,11 @@
             min-width: 0;
         }
 
-        /* 篩選區 */
         .filter-grid {
             display: grid;
             grid-template-columns: 1fr 1fr auto;
             gap: 12px;
             align-items: end;
-            margin-bottom: 16px;
         }
 
         @media (max-width: 768px) {
@@ -322,13 +308,11 @@
         <h1>🧶 德峰紗帳進出管理系統</h1>
         <span class="status-badge">🟢 雲端連線中</span>
     </div>
-    <!-- 頁面跳轉按鈕 (優先嘗試 index.html，次選 order_system.html) -->
     <a href="index.html" class="btn-switch-system">📋 切換至訂單系統 ➔</a>
 </div>
 
 <div class="main-container">
 
-    <!-- 【左側】紗帳單據輸入表單 -->
     <div class="card">
         <h2 class="card-title" id="formTitle">📝 新增紗帳進出紀錄</h2>
         <form id="yarnForm">
@@ -337,16 +321,12 @@
 
             <div class="form-grid">
                 
-                <!-- 客戶名稱：輸入框 + datalist 自動下拉選擇 -->
                 <div class="form-group full-width">
-                    <label for="customerName">客戶名稱 (可點擊選擇歷史客戶或直接輸入)</label>
-                    <input type="text" id="customerName" list="customerDatalist" required placeholder="點選展開選單或直接輸入..." oninput="updateStockSummary()" onfocus="this.select()">
-                    <datalist id="customerDatalist">
-                        <!-- 由 JavaScript 自動動態載入歷史客戶清單 -->
-                    </datalist>
+                    <label for="customerName">客戶名稱</label>
+                    <input type="text" id="customerName" list="customerDatalist" required placeholder="點選選單或輸入名稱..." oninput="updateStockSummary()" onfocus="this.select()">
+                    <datalist id="customerDatalist"></datalist>
                 </div>
 
-                <!-- 即時庫存統計提示區域 -->
                 <div class="full-width summary-card" id="stockSummaryBox">
                     <div class="summary-header">
                         <span>📦 該客戶累計紗帳庫存</span>
@@ -363,7 +343,7 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="actionType">類別 (進紗 / 出紗)</label>
+                    <label for="actionType">類別</label>
                     <select id="actionType" required onchange="updateStockSummary()">
                         <option value="進紗">🟢 進紗 (增加庫存)</option>
                         <option value="退紗">🔴 出紗/退紗 (扣減庫存)</option>
@@ -372,7 +352,7 @@
 
                 <div class="form-group full-width">
                     <label for="yarnType">紗種規格</label>
-                    <input type="text" id="yarnType" required placeholder="例如：30s 精梳棉、70D 彈性纖維">
+                    <input type="text" id="yarnType" required placeholder="例如：30s 精梳棉">
                 </div>
 
                 <div class="form-group">
@@ -386,7 +366,7 @@
                 </div>
 
                 <div class="form-group full-width">
-                    <label for="boxCount">箱數 (自動計算：1件 = 4箱，亦可微調)</label>
+                    <label for="boxCount">箱數 (自動計算：1件 = 4箱)</label>
                     <input type="number" step="0.1" id="boxCount" placeholder="例如：40">
                 </div>
 
@@ -397,11 +377,11 @@
 
                 <div class="form-group full-width">
                     <label for="remark">備註</label>
-                    <textarea id="remark" rows="2" placeholder="備註說明、司機車號、存放位置等..."></textarea>
+                    <textarea id="remark" rows="2" placeholder="備註說明、司機車號等..."></textarea>
                 </div>
 
                 <div class="form-group full-width">
-                    <label for="yarnImage">上傳單據 / 紗標照片</label>
+                    <label for="yarnImage">上傳單據照片</label>
                     <input type="file" id="yarnImage" accept="image/*" onchange="handleImageUpload(event)">
                     <div id="imageUploadStatus" style="font-size:0.8rem; color:var(--text-sub); margin-top:4px;"></div>
                 </div>
@@ -409,13 +389,12 @@
             </div>
 
             <div class="btn-group">
-                <button type="submit" class="btn-success" id="saveBtn">儲存進出紀錄至雲端</button>
+                <button type="submit" class="btn-success" id="saveBtn">儲存進出紀錄</button>
                 <button type="button" class="btn-primary" id="cancelBtn" style="display:none; background-color: #64748b;" onclick="resetForm()">取消修改</button>
             </div>
         </form>
     </div>
 
-    <!-- 【右側】資料列表區 -->
     <div class="right-column">
         
         <div class="card">
@@ -466,12 +445,10 @@
 
 </div>
 
-<!-- 圖片放大 Modal -->
 <div id="imageModal" class="modal" onclick="closeModal()">
     <img id="modalImg" class="modal-content" src="">
 </div>
 
-<!-- Firebase 模組 -->
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getDatabase, ref, push, set, remove, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
@@ -513,7 +490,6 @@
         updateCustomerDropdowns();
     });
 
-    // 件數與箱數自動換算 (1 件 = 4 箱)
     window.autoCalcBoxCount = function() {
         const pkg = parseFloat(document.getElementById("packageCount").value);
         if (!isNaN(pkg)) {
@@ -521,7 +497,6 @@
         }
     };
 
-    // 動態更新 Datalist 清單與右側篩選下拉選單
     function updateCustomerDropdowns() {
         const customers = new Set();
         Object.values(yarnDataMap).forEach(i => i.customerName && customers.add(i.customerName.trim()));
@@ -529,7 +504,6 @@
 
         const sortedCustomers = Array.from(customers).sort();
 
-        // 1. 更新輸入框的 Datalist 歷史選單
         const datalist = document.getElementById("customerDatalist");
         datalist.innerHTML = "";
         sortedCustomers.forEach(c => {
@@ -538,7 +512,6 @@
             datalist.appendChild(opt);
         });
 
-        // 2. 更新右側篩選下拉選單
         const filterSelect = document.getElementById("filterCustomer");
         const currentVal = filterSelect.value;
         filterSelect.innerHTML = '<option value="">-- 全部客戶 --</option>';
@@ -551,7 +524,6 @@
         filterSelect.value = currentVal;
     }
 
-    // 計算該客戶目前紗庫存狀態
     window.updateStockSummary = function() {
         const custName = document.getElementById("customerName").value.trim();
         const totalText = document.getElementById("stockTotalText");
@@ -605,7 +577,6 @@
         }
     };
 
-    // 處理圖片上傳與壓縮
     window.handleImageUpload = function(event) {
         const file = event.target.files[0];
         const statusDiv = document.getElementById("imageUploadStatus");
@@ -641,17 +612,15 @@
         reader.readAsDataURL(file);
     };
 
-    // 渲染表格
     window.renderTable = function() {
         const selectedCustomer = document.getElementById("filterCustomer").value;
         const keyword = document.getElementById("filterKeyword").value.toLowerCase().trim();
         const tbody = document.getElementById("yarnTableBody");
         tbody.innerHTML = "";
 
-        const keys = Object.keys(yarnDataMap);
         currentRenderedYarn = [];
 
-        keys.forEach(key => {
+        Object.keys(yarnDataMap).forEach(key => {
             const item = yarnDataMap[key];
             const matchCustomer = !selectedCustomer || item.customerName === selectedCustomer;
             const matchKeyword = !keyword ||
@@ -665,7 +634,6 @@
             }
         });
 
-        // 依日期排序 (最新在最上面)
         currentRenderedYarn.sort((a,b) => new Date(b.recordDate) - new Date(a.recordDate));
 
         if (currentRenderedYarn.length === 0) {
@@ -703,7 +671,6 @@
         });
     };
 
-    // 儲存表單
     document.getElementById("yarnForm").addEventListener("submit", function(e) {
         e.preventDefault();
 
@@ -754,7 +721,7 @@
     };
 
     window.deleteYarn = function(key) {
-        if (confirm("確定要刪除這筆紗帳紀錄嗎？這將會影響庫存計算。")) {
+        if (confirm("確定要刪除這筆紗帳紀錄嗎？")) {
             remove(ref(db, `yarnRecords/${key}`));
         }
     };
@@ -766,7 +733,7 @@
         document.getElementById("imageUploadStatus").innerText = "";
         document.getElementById("recordDate").valueAsDate = new Date();
         document.getElementById("formTitle").innerText = "📝 新增紗帳進出紀錄";
-        document.getElementById("saveBtn").innerText = "儲存進出紀錄至雲端";
+        document.getElementById("saveBtn").innerText = "儲存進出紀錄";
         document.getElementById("cancelBtn").style.display = "none";
         updateStockSummary();
     };
