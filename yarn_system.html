@@ -166,32 +166,6 @@
             box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
         }
 
-        .summary-card {
-            background-color: #eff6ff;
-            border: 1px solid #bfdbfe;
-            border-radius: 8px;
-            padding: 12px;
-            margin-bottom: 12px;
-        }
-
-        .summary-header {
-            font-weight: 700;
-            color: #1e40af;
-            font-size: 0.9rem;
-            margin-bottom: 6px;
-            display: flex;
-            justify-content: space-between;
-        }
-
-        .summary-detail-list {
-            font-size: 0.85rem;
-            color: #1d4ed8;
-            max-height: 120px;
-            overflow-y: auto;
-            margin: 0;
-            padding-left: 18px;
-        }
-
         .btn-group {
             display: flex;
             gap: 10px;
@@ -268,6 +242,7 @@
             border-bottom: 1px solid var(--border);
             color: var(--text-main);
             vertical-align: middle;
+            white-space: nowrap;
         }
 
         tbody tr:hover { background-color: #f8fafc; }
@@ -313,28 +288,21 @@
 
 <div class="main-container">
 
+    <!-- 左側表單 -->
     <div class="card">
-        <h2 class="card-title" id="formTitle">📝 新增紗帳進出紀錄</h2>
+        <h2 class="card-title" id="formTitle">📝 新增紗帳紀錄</h2>
         <form id="yarnForm">
             <input type="hidden" id="editKey" value="">
             <input type="hidden" id="imageDataBase64" value="">
 
             <div class="form-grid">
                 
-                <div class="form-group full-width">
-                    <label for="customerName">客戶名稱</label>
-                    <input type="text" id="customerName" list="customerDatalist" required placeholder="點選選單或輸入名稱..." oninput="updateStockSummary()" onchange="updateStockSummary()" onfocus="this.select()">
-                    <datalist id="customerDatalist"></datalist>
-                </div>
-
-                <div class="full-width summary-card" id="stockSummaryBox">
-                    <div class="summary-header">
-                        <span>📦 該客戶累計紗帳庫存</span>
-                        <span id="stockTotalText">共 0 kg</span>
-                    </div>
-                    <ul class="summary-detail-list" id="stockDetailList">
-                        <li>請輸入或選擇客戶名稱...</li>
-                    </ul>
+                <div class="form-group">
+                    <label for="actionType">進紗 (進/出類別)</label>
+                    <select id="actionType" required>
+                        <option value="進紗">🟢 進紗 (增加)</option>
+                        <option value="出紗/退紗">🔴 出紗/退紗 (扣減)</option>
+                    </select>
                 </div>
 
                 <div class="form-group">
@@ -342,37 +310,46 @@
                     <input type="date" id="recordDate" required>
                 </div>
 
-                <div class="form-group">
-                    <label for="actionType">類別</label>
-                    <select id="actionType" required onchange="updateStockSummary()">
-                        <option value="進紗">🟢 進紗 (增加庫存)</option>
-                        <option value="退紗">🔴 出紗/退紗 (扣減庫存)</option>
-                    </select>
+                <div class="form-group full-width">
+                    <label for="customerName">客戶名稱</label>
+                    <input type="text" id="customerName" list="customerDatalist" required placeholder="點選選單或輸入名稱..." onfocus="this.select()">
+                    <datalist id="customerDatalist"></datalist>
                 </div>
 
                 <div class="form-group full-width">
-                    <label for="yarnType">紗種規格</label>
+                    <label for="yarnType">紗種</label>
                     <input type="text" id="yarnType" required placeholder="例如：30s 精梳棉">
                 </div>
 
-                <div class="form-group">
-                    <label for="yarnWeight">紗重量 (kg)</label>
-                    <input type="number" step="0.01" id="yarnWeight" required placeholder="例如：500">
+                <div class="form-group full-width">
+                    <label for="yarnSupplier">紗商</label>
+                    <input type="text" id="yarnSupplier" placeholder="例如：遠東紡織">
                 </div>
 
                 <div class="form-group">
-                    <label for="packageCount">件數/包數</label>
+                    <label for="packageCount">件數</label>
                     <input type="number" step="0.1" id="packageCount" placeholder="例如：10" oninput="autoCalcBoxCount()">
                 </div>
 
-                <div class="form-group full-width">
-                    <label for="boxCount">箱數 (自動計算：1件 = 4箱)</label>
+                <div class="form-group">
+                    <label for="boxCount">箱數</label>
                     <input type="number" step="0.1" id="boxCount" placeholder="例如：40" oninput="autoCalcPkgCount()">
                 </div>
 
                 <div class="form-group full-width">
-                    <label for="yarnBatch">紗批號 / 廠牌</label>
-                    <input type="text" id="yarnBatch" placeholder="例如：遠東 A-1234">
+                    <label for="yarnWeight">紗量 (kg)</label>
+                    <input type="number" step="0.01" id="yarnWeight" required placeholder="例如：500">
+                </div>
+
+                <div class="form-group full-width">
+                    <label for="yarnMill">導紗廠</label>
+                    <input type="text" id="yarnMill" placeholder="例如：弘大導紗廠">
+                </div>
+
+                <div class="form-group full-width">
+                    <label for="yarnImage">單據照片</label>
+                    <input type="file" id="yarnImage" accept="image/*" onchange="handleImageUpload(event)">
+                    <div id="imageUploadStatus" style="font-size:0.8rem; color:var(--text-sub); margin-top:4px;"></div>
                 </div>
 
                 <div class="form-group full-width">
@@ -380,21 +357,16 @@
                     <textarea id="remark" rows="2" placeholder="備註說明、司機車號等..."></textarea>
                 </div>
 
-                <div class="form-group full-width">
-                    <label for="yarnImage">上傳單據照片</label>
-                    <input type="file" id="yarnImage" accept="image/*" onchange="handleImageUpload(event)">
-                    <div id="imageUploadStatus" style="font-size:0.8rem; color:var(--text-sub); margin-top:4px;"></div>
-                </div>
-
             </div>
 
             <div class="btn-group">
-                <button type="submit" class="btn-success" id="saveBtn">儲存進出紀錄</button>
+                <button type="submit" class="btn-success" id="saveBtn">儲存紗帳紀錄</button>
                 <button type="button" class="btn-primary" id="cancelBtn" style="display:none; background-color: #64748b;" onclick="resetForm()">取消修改</button>
             </div>
         </form>
     </div>
 
+    <!-- 右側列表與搜尋 -->
     <div class="right-column">
         
         <div class="card">
@@ -408,10 +380,10 @@
                 </div>
                 <div class="form-group">
                     <label for="filterKeyword">關鍵字搜尋</label>
-                    <input type="text" id="filterKeyword" placeholder="搜尋紗種、批號、備註..." oninput="renderTable()">
+                    <input type="text" id="filterKeyword" placeholder="搜尋紗種、紗商、導紗廠..." oninput="renderTable()">
                 </div>
                 <div>
-                    <button class="btn-excel" onclick="exportYarnToExcel()">📄 匯出 Excel 紗帳報表</button>
+                    <button class="btn-excel" onclick="exportYarnToExcel()">📄 匯出 Excel 報表</button>
                 </div>
             </div>
         </div>
@@ -422,20 +394,22 @@
                 <table>
                     <thead>
                         <tr>
-                            <th>照片</th>
+                            <th>進紗</th>
                             <th>日期</th>
                             <th>客戶名稱</th>
-                            <th>類別</th>
-                            <th>紗種規格</th>
-                            <th>重量 (kg)</th>
-                            <th>件數 / 箱數</th>
-                            <th>批號/廠牌</th>
+                            <th>紗種</th>
+                            <th>紗商</th>
+                            <th>件數</th>
+                            <th>箱數</th>
+                            <th>紗量 (kg)</th>
+                            <th>導紗廠</th>
+                            <th>單據照片</th>
                             <th>備註</th>
                             <th>操作</th>
                         </tr>
                     </thead>
                     <tbody id="yarnTableBody">
-                        <tr><td colspan="10" class="no-data">載入紗帳資料中...</td></tr>
+                        <tr><td colspan="12" class="no-data">載入紗帳資料中...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -445,6 +419,7 @@
 
 </div>
 
+<!-- 圖片放大 Modal -->
 <div id="imageModal" class="modal" onclick="closeModal()">
     <img id="modalImg" class="modal-content" src="">
 </div>
@@ -481,7 +456,6 @@
     onValue(yarnRef, (snapshot) => {
         yarnDataMap = snapshot.val() || {};
         updateCustomerDropdowns();
-        updateStockSummary();
         renderTable();
     });
 
@@ -531,59 +505,6 @@
         filterSelect.value = currentVal;
     }
 
-    window.updateStockSummary = function() {
-        const custName = document.getElementById("customerName").value.trim();
-        const totalText = document.getElementById("stockTotalText");
-        const detailList = document.getElementById("stockDetailList");
-
-        if (!custName) {
-            totalText.innerText = "共 0 kg";
-            detailList.innerHTML = "<li>請輸入或選擇客戶名稱...</li>";
-            return;
-        }
-
-        let totalWeight = 0;
-        let totalBox = 0;
-        const yarnSummary = {};
-
-        Object.values(yarnDataMap).forEach(item => {
-            if (item.customerName && item.customerName.trim() === custName) {
-                const isImport = (item.actionType === "進紗");
-                const multiplier = isImport ? 1 : -1;
-
-                const w = (parseFloat(item.yarnWeight) || 0) * multiplier;
-                const pkg = parseFloat(item.packageCount) || 0;
-                const box = (item.boxCount !== undefined ? parseFloat(item.boxCount) : (pkg * 4)) * multiplier;
-
-                totalWeight += w;
-                totalBox += box;
-
-                const yType = item.yarnType || "未標示紗種";
-                if (!yarnSummary[yType]) {
-                    yarnSummary[yType] = { weight: 0, box: 0 };
-                }
-                yarnSummary[yType].weight += w;
-                yarnSummary[yType].box += box;
-            }
-        });
-
-        if (Object.keys(yarnSummary).length === 0) {
-            totalText.innerText = "無庫存紀錄";
-            detailList.innerHTML = `<li style="color:#64748b;">尚無「${custName}」的紗帳資料</li>`;
-        } else {
-            totalText.innerText = `總庫存：${totalWeight.toFixed(2)} kg (${totalBox.toFixed(1)} 箱)`;
-            detailList.innerHTML = "";
-            Object.keys(yarnSummary).forEach(yName => {
-                const li = document.createElement("li");
-                const w = yarnSummary[yName].weight;
-                const b = yarnSummary[yName].box;
-                const colorStyle = w < 0 ? "color:#dc2626;" : "";
-                li.innerHTML = `<span style="${colorStyle}"><strong>${yName}</strong>: ${w.toFixed(2)} kg (${b.toFixed(1)} 箱)</span>`;
-                detailList.appendChild(li);
-            });
-        }
-    };
-
     window.handleImageUpload = function(event) {
         const file = event.target.files[0];
         const statusDiv = document.getElementById("imageUploadStatus");
@@ -631,9 +552,10 @@
             const item = yarnDataMap[key];
             const matchCustomer = !selectedCustomer || item.customerName === selectedCustomer;
             const matchKeyword = !keyword ||
-                item.customerName.toLowerCase().includes(keyword) ||
-                item.yarnType.toLowerCase().includes(keyword) ||
-                (item.yarnBatch && item.yarnBatch.toLowerCase().includes(keyword)) ||
+                (item.customerName && item.customerName.toLowerCase().includes(keyword)) ||
+                (item.yarnType && item.yarnType.toLowerCase().includes(keyword)) ||
+                (item.yarnSupplier && item.yarnSupplier.toLowerCase().includes(keyword)) ||
+                (item.yarnMill && item.yarnMill.toLowerCase().includes(keyword)) ||
                 (item.remark && item.remark.toLowerCase().includes(keyword));
 
             if (matchCustomer && matchKeyword) {
@@ -644,7 +566,7 @@
         currentRenderedYarn.sort((a,b) => new Date(b.recordDate) - new Date(a.recordDate));
 
         if (currentRenderedYarn.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="10" class="no-data">目前無符合條件的紗帳資料</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="12" class="no-data">目前無符合條件的紗帳資料</td></tr>';
             return;
         }
 
@@ -660,14 +582,16 @@
 
             const row = document.createElement("tr");
             row.innerHTML = `
-                <td>${imgHtml}</td>
+                <td><span style="${badgeClass}">${item.actionType || "進紗"}</span></td>
                 <td><strong>${item.recordDate || "-"}</strong></td>
-                <td><strong>${item.customerName}</strong></td>
-                <td><span style="${badgeClass}">${item.actionType}</span></td>
-                <td>${item.yarnType}</td>
-                <td><strong>${item.yarnWeight} kg</strong></td>
-                <td>${pkg} / ${box}</td>
-                <td>${item.yarnBatch || "-"}</td>
+                <td><strong>${item.customerName || "-"}</strong></td>
+                <td>${item.yarnType || "-"}</td>
+                <td>${item.yarnSupplier || item.yarnBatch || "-"}</td>
+                <td>${pkg}</td>
+                <td>${box}</td>
+                <td><strong>${item.yarnWeight || 0} kg</strong></td>
+                <td>${item.yarnMill || "-"}</td>
+                <td>${imgHtml}</td>
                 <td>${item.remark || "-"}</td>
                 <td>
                     <button class="btn-primary" style="padding: 4px 8px; font-size: 0.85rem;" onclick="editYarn('${item.key}')">編輯</button>
@@ -685,16 +609,16 @@
         const newImageBase64 = document.getElementById("imageDataBase64").value;
 
         const yarnData = {
-            customerName: document.getElementById("customerName").value.trim(),
-            recordDate: document.getElementById("recordDate").value,
             actionType: document.getElementById("actionType").value,
+            recordDate: document.getElementById("recordDate").value,
+            customerName: document.getElementById("customerName").value.trim(),
             yarnType: document.getElementById("yarnType").value.trim(),
-            yarnWeight: parseFloat(document.getElementById("yarnWeight").value) || 0,
+            yarnSupplier: document.getElementById("yarnSupplier").value.trim(),
             packageCount: document.getElementById("packageCount").value ? parseFloat(document.getElementById("packageCount").value) : "",
             boxCount: document.getElementById("boxCount").value ? parseFloat(document.getElementById("boxCount").value) : "",
-            yarnBatch: document.getElementById("yarnBatch").value.trim(),
+            yarnWeight: parseFloat(document.getElementById("yarnWeight").value) || 0,
+            yarnMill: document.getElementById("yarnMill").value.trim(),
             remark: document.getElementById("remark").value.trim(),
-            // 修正照片被清空問題
             image: newImageBase64 || (editKey && yarnDataMap[editKey] ? (yarnDataMap[editKey].image || "") : "")
         };
 
@@ -710,22 +634,22 @@
     window.editYarn = function(key) {
         const item = yarnDataMap[key];
         document.getElementById("editKey").value = key;
-        document.getElementById("customerName").value = item.customerName;
-        document.getElementById("recordDate").value = item.recordDate;
-        document.getElementById("actionType").value = item.actionType;
-        document.getElementById("yarnType").value = item.yarnType;
-        document.getElementById("yarnWeight").value = item.yarnWeight;
+        document.getElementById("actionType").value = item.actionType || "進紗";
+        document.getElementById("recordDate").value = item.recordDate || "";
+        document.getElementById("customerName").value = item.customerName || "";
+        document.getElementById("yarnType").value = item.yarnType || "";
+        document.getElementById("yarnSupplier").value = item.yarnSupplier || item.yarnBatch || "";
         document.getElementById("packageCount").value = item.packageCount || "";
         document.getElementById("boxCount").value = item.boxCount || "";
-        document.getElementById("yarnBatch").value = item.yarnBatch || "";
+        document.getElementById("yarnWeight").value = item.yarnWeight || "";
+        document.getElementById("yarnMill").value = item.yarnMill || "";
         document.getElementById("remark").value = item.remark || "";
-        document.getElementById("imageDataBase64").value = ""; // 清空上傳暫存，若未再選擇新圖會自動保留舊圖
+        document.getElementById("imageDataBase64").value = ""; 
 
         document.getElementById("formTitle").innerText = "✏️ 編輯紗帳紀錄";
-        document.getElementById("saveBtn").innerText = "更新進出紀錄";
+        document.getElementById("saveBtn").innerText = "更新紗帳紀錄";
         document.getElementById("cancelBtn").style.display = "inline-flex";
 
-        updateStockSummary();
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
@@ -743,10 +667,9 @@
         document.getElementById("imageDataBase64").value = "";
         document.getElementById("imageUploadStatus").innerText = "";
         document.getElementById("recordDate").valueAsDate = new Date();
-        document.getElementById("formTitle").innerText = "📝 新增紗帳進出紀錄";
-        document.getElementById("saveBtn").innerText = "儲存進出紀錄";
+        document.getElementById("formTitle").innerText = "📝 新增紗帳紀錄";
+        document.getElementById("saveBtn").innerText = "儲存紗帳紀錄";
         document.getElementById("cancelBtn").style.display = "none";
-        updateStockSummary();
     };
 
     window.openModal = function(imgSrc) {
@@ -765,14 +688,15 @@
         }
 
         const excelData = currentRenderedYarn.map(item => ({
+            "進紗": item.actionType || "進紗",
             "日期": item.recordDate,
             "客戶名稱": item.customerName,
-            "類別": item.actionType,
-            "紗種規格": item.yarnType,
-            "重量 (kg)": item.yarnWeight,
+            "紗種": item.yarnType,
+            "紗商": item.yarnSupplier || item.yarnBatch || "",
             "件數": item.packageCount || "",
             "箱數": item.boxCount || "",
-            "批號/廠牌": item.yarnBatch || "",
+            "紗量 (kg)": item.yarnWeight,
+            "導紗廠": item.yarnMill || "",
             "備註": item.remark || ""
         }));
 
