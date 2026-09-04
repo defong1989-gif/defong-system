@@ -342,7 +342,6 @@
 
                 <div class="form-group">
                     <label for="packageCount">件數</label>
-                    <!-- 修改 step 為 0.01 支援兩位小數 -->
                     <input type="number" step="0.01" id="packageCount" placeholder="例如：1.25" oninput="autoCalcBoxCount()">
                 </div>
 
@@ -449,7 +448,7 @@
 
 <!-- 圖片放大 Modal -->
 <div id="imageModal" class="modal" onclick="closeModal()">
-    <img id="modalImg" class="modal-content" src="">
+    <img id="modalImg" class="modal-content" src="" alt="單據放大預覽">
 </div>
 
 <script type="module">
@@ -609,7 +608,7 @@
         });
 
         document.getElementById("statCount").innerText = currentRenderedYarn.length;
-        document.getElementById("statPkg").innerText = totalPkg.toFixed(2); // 改為保留兩位小數
+        document.getElementById("statPkg").innerText = totalPkg.toFixed(2);
         document.getElementById("statBox").innerText = totalBox.toFixed(2);
         document.getElementById("statWeight").innerText = totalWeight.toFixed(2);
 
@@ -677,6 +676,8 @@
 
     window.editYarn = function(key) {
         const item = yarnDataMap[key];
+        if (!item) return;
+
         document.getElementById("editKey").value = key;
         document.getElementById("recordDate").value = item.recordDate || "";
         document.getElementById("customerName").value = item.customerName || "";
@@ -778,10 +779,10 @@
         }
 
         const workbook = XLSX.utils.book_new();
+        const monthlySummary = [];
+        const monthSheets = [];
 
         // 按月份拆分 (01 ~ 12)
-        const monthlySummary = [];
-
         for (let m = 1; m <= 12; m++) {
             const monthStr = m.toString().padStart(2, '0');
             const monthKey = `${targetYear}-${monthStr}`;
@@ -811,20 +812,25 @@
             monthlySummary.push({
                 "月份": `${m} 月`,
                 "筆數": monthData.length,
-                "總件數": mPkg ? mPkg.toFixed(2) : 0, // 改為保留兩位小數
+                "總件數": mPkg ? mPkg.toFixed(2) : 0,
                 "總箱數": mBox ? mBox.toFixed(2) : 0,
                 "總紗量 (kg)": mWeight ? mWeight.toFixed(2) : 0
             });
 
             if (excelRows.length > 0) {
                 const worksheet = XLSX.utils.json_to_sheet(excelRows);
-                XLSX.utils.book_append_sheet(workbook, worksheet, `${monthStr}月`);
+                monthSheets.push({ name: `${monthStr}月`, sheet: worksheet });
             }
         }
 
-        // 新增一份「全年度統計」放在第一個分頁
+        // 先把「全年度統計摘要」作為第一個工作表 append 進去
         const summaryWorksheet = XLSX.utils.json_to_sheet(monthlySummary);
-        XLSX.utils.book_append_sheet(workbook, summaryWorksheet, "全年度統計摘要", true);
+        XLSX.utils.book_append_sheet(workbook, summaryWorksheet, "全年度統計摘要");
+
+        // 依序 append 各月份工作表
+        monthSheets.forEach(m => {
+            XLSX.utils.book_append_sheet(workbook, m.sheet, m.name);
+        });
 
         const custLabel = selectedCustomer || "全部客戶";
         XLSX.writeFile(workbook, `德峰紗帳分月報表_${targetYear}年_${custLabel}.xlsx`);
