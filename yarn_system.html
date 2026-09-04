@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>德峰紗帳進出管理系統</title>
+    <!-- 載入 SheetJS 以支援 Excel 匯出 -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --primary: #2563eb;       /* 藍色主題 (紗帳系統) */
+            --primary-light: #3b82f6;
+            --primary-hover: #1d4ed8;
+            --success: #10b981;
+            --success-hover: #059669;
+            --danger: #ef4444;
+            --danger-hover: #dc2626;
+            --excel: #16a34a;
+            --excel-hover: #15803d;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-sub: #475569;
+            --border: #cbd5e1;
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text-main);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        /* 頂部主題列與跳轉按鈕 */
+        .header {
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            color: white;
+            padding: 16px 32px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+
+        .status-badge {
+            background-color: #d1fae5;
+            color: #065f46;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        /* 跨系統頁面跳轉按鈕 */
+        .btn-switch-system {
+            background-color: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-switch-system:hover {
+            background-color: white;
+            color: var(--primary);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+
+        /* 主要內容雙欄區域 */
+        .main-container {
+            padding: 20px 24px;
+            display: grid;
+            grid-template-columns: 420px minmax(0, 1fr);
+            gap: 20px;
+            align-items: start;
+        }
+
+        @media (max-width: 1100px) {
+            .main-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            margin-bottom: 20px;
+            width: 100%;
+        }
+
+        .card-title {
+            margin-top: 0;
+            margin-bottom: 16px;
+            color: var(--primary);
+            font-size: 1.15rem;
+            font-weight: 700;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #f1f5f9;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+            width: 100%;
+        }
+
+        .full-width {
+            grid-column: span 2;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            width: 100%;
+        }
+
+        label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-sub);
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 9px 11px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.9rem;
+            outline: none;
+            transition: all 0.2s;
+            background-color: #f8fafc;
+            box-sizing: border-box;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            border-color: var(--primary-light);
+            background-color: #fff;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+        }
+
+        /* 統計提示卡片 */
+        .summary-card {
+            background-color: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 12px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .summary-header {
+            font-weight: 700;
+            color: #1e40af;
+            font-size: 0.9rem;
+            margin-bottom: 6px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .summary-detail-list {
+            font-size: 0.85rem;
+            color: #1d4ed8;
+            max-height: 120px;
+            overflow-y: auto;
+            margin: 0;
+            padding-left: 18px;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            width: 100%;
+        }
+
+        button {
+            padding: 10px 18px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .btn-primary { background-color: var(--primary-light); color: white; }
+        .btn-primary:hover { background-color: var(--primary-hover); }
+
+        .btn-success { background-color: var(--success); color: white; width: 100%; }
+        .btn-success:hover { background-color: var(--success-hover); }
+
+        .btn-excel { background-color: var(--excel); color: white; white-space: nowrap; }
+        .btn-excel:hover { background-color: var(--excel-hover); }
+
+        .btn-danger { background-color: var(--danger); color: white; padding: 4px 8px; font-size: 0.85rem; }
+        .btn-danger:hover { background-color: var(--danger-hover); }
+
+        .right-column {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            min-width: 0;
+        }
+
+        /* 篩選區 */
+        .filter-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr auto;
+            gap: 12px;
+            align-items: end;
+            margin-bottom: 16px;
+        }
+
+        @media (max-width: 768px) {
+            .filter-grid { grid-template-columns: 1fr; }
+        }
+
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            text-align: left;
+            font-size: 0.9rem;
+        }
+
+        th {
+            background-color: #f8fafc;
+            color: var(--text-sub);
+            font-weight: 600;
+            padding: 10px 12px;
+            border-bottom: 2px solid var(--border);
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-main);
+            vertical-align: middle;
+        }
+
+        tbody tr:hover { background-color: #f8fafc; }
+
+        .img-preview {
+            width: 50px;
+            height: 50px;
+            object-fit: cover;
+            border-radius: 6px;
+            cursor: pointer;
+            border: 1px solid var(--border);
+        }
+
+        .no-data { text-align: center; color: #94a3b8; padding: 32px; }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0; top: 0;
+            width: 100%; height: 100%;
+            background-color: rgba(0,0,0,0.8);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            max-width: 90%;
+            max-height: 90%;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <div class="header-left">
+        <h1>🧶 德峰紗帳進出管理系統</h1>
+        <span class="status-badge">🟢 雲端連線中</span>
+    </div>
+    <!-- 頁面跳轉按鈕 (優先嘗試 index.html，次選 order_system.html) -->
+    <a href="index.html" class="btn-switch-system">📋 切換至訂單系統 ➔</a>
+</div>
+
+<div class="main-container">
+
+    <!-- 【左側】紗帳單據輸入表單 -->
+    <div class="card">
+        <h2 class="card-title" id="formTitle">📝 新增紗帳進出紀錄</h2>
+        <form id="yarnForm">
+            <input type="hidden" id="editKey" value="">
+            <input type="hidden" id="imageDataBase64" value="">
+
+            <div class="form-grid">
+                
+                <!-- 客戶名稱：輸入框 + datalist 自動下拉選擇 -->
+                <div class="form-group full-width">
+                    <label for="customerName">客戶名稱 (可點擊選擇歷史客戶或直接輸入)</label>
+                    <input type="text" id="customerName" list="customerDatalist" required placeholder="點選展開選單或直接輸入..." oninput="updateStockSummary()" onfocus="this.select()">
+                    <datalist id="customerDatalist">
+                        <!-- 由 JavaScript 自動動態載入歷史客戶清單 -->
+                    </datalist>
+                </div>
+
+                <!-- 即時庫存統計提示區域 -->
+                <div class="full-width summary-card" id="stockSummaryBox">
+                    <div class="summary-header">
+                        <span>📦 該客戶累計紗帳庫存</span>
+                        <span id="stockTotalText">共 0 kg</span>
+                    </div>
+                    <ul class="summary-detail-list" id="stockDetailList">
+                        <li>請輸入或選擇客戶名稱...</li>
+                    </ul>
+                </div>
+
+                <div class="form-group">
+                    <label for="recordDate">日期</label>
+                    <input type="date" id="recordDate" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="actionType">類別 (進紗 / 出紗)</label>
+                    <select id="actionType" required onchange="updateStockSummary()">
+                        <option value="進紗">🟢 進紗 (增加庫存)</option>
+                        <option value="退紗">🔴 出紗/退紗 (扣減庫存)</option>
+                    </select>
+                </div>
+
+                <div class="form-group full-width">
+                    <label for="yarnType">紗種規格</label>
+                    <input type="text" id="yarnType" required placeholder="例如：30s 精梳棉、70D 彈性纖維">
+                </div>
+
+                <div class="form-group">
+                    <label for="yarnWeight">紗重量 (kg)</label>
+                    <input type="number" step="0.01" id="yarnWeight" required placeholder="例如：500">
+                </div>
+
+                <div class="form-group">
+                    <label for="packageCount">件數/包數</label>
+                    <input type="number" step="0.1" id="packageCount" placeholder="例如：10" oninput="autoCalcBoxCount()">
+                </div>
+
+                <div class="form-group full-width">
+                    <label for="boxCount">箱數 (自動計算：1件 = 4箱，亦可微調)</label>
+                    <input type="number" step="0.1" id="boxCount" placeholder="例如：40">
+                </div>
+
+                <div class="form-group full-width">
+                    <label for="yarnBatch">紗批號 / 廠牌</label>
+                    <input type="text" id="yarnBatch" placeholder="例如：遠東 A-1234">
+                </div>
+
+                <div class="form-group full-width">
+                    <label for="remark">備註</label>
+                    <textarea id="remark" rows="2" placeholder="備註說明、司機車號、存放位置等..."></textarea>
+                </div>
+
+                <div class="form-group full-width">
+                    <label for="yarnImage">上傳單據 / 紗標照片</label>
+                    <input type="file" id="yarnImage" accept="image/*" onchange="handleImageUpload(event)">
+                    <div id="imageUploadStatus" style="font-size:0.8rem; color:var(--text-sub); margin-top:4px;"></div>
+                </div>
+
+            </div>
+
+            <div class="btn-group">
+                <button type="submit" class="btn-success" id="saveBtn">儲存進出紀錄至雲端</button>
+                <button type="button" class="btn-primary" id="cancelBtn" style="display:none; background-color: #64748b;" onclick="resetForm()">取消修改</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- 【右側】資料列表區 -->
+    <div class="right-column">
+        
+        <div class="card">
+            <h2 class="card-title">🔍 紗帳紀錄查詢與篩選</h2>
+            <div class="filter-grid">
+                <div class="form-group">
+                    <label for="filterCustomer">依客戶篩選</label>
+                    <select id="filterCustomer" onchange="renderTable()">
+                        <option value="">-- 全部客戶 --</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="filterKeyword">關鍵字搜尋</label>
+                    <input type="text" id="filterKeyword" placeholder="搜尋紗種、批號、備註..." oninput="renderTable()">
+                </div>
+                <div>
+                    <button class="btn-excel" onclick="exportYarnToExcel()">📄 匯出 Excel 紗帳報表</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2 class="card-title">📊 紗帳歷史明細清單</h2>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>照片</th>
+                            <th>日期</th>
+                            <th>客戶名稱</th>
+                            <th>類別</th>
+                            <th>紗種規格</th>
+                            <th>重量 (kg)</th>
+                            <th>件數 / 箱數</th>
+                            <th>批號/廠牌</th>
+                            <th>備註</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="yarnTableBody">
+                        <tr><td colspan="10" class="no-data">載入紗帳資料中...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+<!-- 圖片放大 Modal -->
+<div id="imageModal" class="modal" onclick="closeModal()">
+    <img id="modalImg" class="modal-content" src="">
+</div>
+
+<!-- Firebase 模組 -->
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getDatabase, ref, push, set, remove, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyAR1sHUr3Yx6z2-EdPxvnKk50X4XL0-wR4",
+        authDomain: "defong-ab039.firebaseapp.com",
+        databaseURL: "https://defong-ab039-default-rtdb.firebaseio.com",
+        projectId: "defong-ab039",
+        storageBucket: "defong-ab039.firebasestorage.app",
+        messagingSenderId: "751338216702",
+        appId: "1:751338216702:web:1892c102b6565c8543d9af",
+        measurementId: "G-ZTV82ZDYSV"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    
+    const yarnRef = ref(db, 'yarnRecords');   
+    const orderRef = ref(db, 'orderRecords'); 
+
+    let yarnDataMap = {};
+    let orderDataMap = {};
+    let currentRenderedYarn = [];
+
+    window.onload = function() {
+        document.getElementById("recordDate").valueAsDate = new Date();
+    };
+
+    onValue(yarnRef, (snapshot) => {
+        yarnDataMap = snapshot.val() || {};
+        updateCustomerDropdowns();
+        updateStockSummary();
+        renderTable();
+    });
+
+    onValue(orderRef, (snapshot) => {
+        orderDataMap = snapshot.val() || {};
+        updateCustomerDropdowns();
+    });
+
+    // 件數與箱數自動換算 (1 件 = 4 箱)
+    window.autoCalcBoxCount = function() {
+        const pkg = parseFloat(document.getElementById("packageCount").value);
+        if (!isNaN(pkg)) {
+            document.getElementById("boxCount").value = (pkg * 4).toFixed(1);
+        }
+    };
+
+    // 動態更新 Datalist 清單與右側篩選下拉選單
+    function updateCustomerDropdowns() {
+        const customers = new Set();
+        Object.values(yarnDataMap).forEach(i => i.customerName && customers.add(i.customerName.trim()));
+        Object.values(orderDataMap).forEach(i => i.customerName && customers.add(i.customerName.trim()));
+
+        const sortedCustomers = Array.from(customers).sort();
+
+        // 1. 更新輸入框的 Datalist 歷史選單
+        const datalist = document.getElementById("customerDatalist");
+        datalist.innerHTML = "";
+        sortedCustomers.forEach(c => {
+            const opt = document.createElement("option");
+            opt.value = c;
+            datalist.appendChild(opt);
+        });
+
+        // 2. 更新右側篩選下拉選單
+        const filterSelect = document.getElementById("filterCustomer");
+        const currentVal = filterSelect.value;
+        filterSelect.innerHTML = '<option value="">-- 全部客戶 --</option>';
+        sortedCustomers.forEach(c => {
+            const opt = document.createElement("option");
+            opt.value = c;
+            opt.textContent = c;
+            filterSelect.appendChild(opt);
+        });
+        filterSelect.value = currentVal;
+    }
+
+    // 計算該客戶目前紗庫存狀態
+    window.updateStockSummary = function() {
+        const custName = document.getElementById("customerName").value.trim();
+        const totalText = document.getElementById("stockTotalText");
+        const detailList = document.getElementById("stockDetailList");
+
+        if (!custName) {
+            totalText.innerText = "共 0 kg";
+            detailList.innerHTML = "<li>請輸入或選擇客戶名稱...</li>";
+            return;
+        }
+
+        let totalWeight = 0;
+        let totalBox = 0;
+        const yarnSummary = {};
+
+        Object.values(yarnDataMap).forEach(item => {
+            if (item.customerName && item.customerName.trim() === custName) {
+                const isImport = (item.actionType === "進紗");
+                const multiplier = isImport ? 1 : -1;
+
+                const w = (parseFloat(item.yarnWeight) || 0) * multiplier;
+                const pkg = parseFloat(item.packageCount) || 0;
+                const box = (item.boxCount !== undefined ? parseFloat(item.boxCount) : (pkg * 4)) * multiplier;
+
+                totalWeight += w;
+                totalBox += box;
+
+                const yType = item.yarnType || "未標示紗種";
+                if (!yarnSummary[yType]) {
+                    yarnSummary[yType] = { weight: 0, box: 0 };
+                }
+                yarnSummary[yType].weight += w;
+                yarnSummary[yType].box += box;
+            }
+        });
+
+        if (Object.keys(yarnSummary).length === 0) {
+            totalText.innerText = "無庫存紀錄";
+            detailList.innerHTML = `<li style="color:#64748b;">尚無「${custName}」的紗帳資料</li>`;
+        } else {
+            totalText.innerText = `總庫存：${totalWeight.toFixed(2)} kg (${totalBox.toFixed(1)} 箱)`;
+            detailList.innerHTML = "";
+            Object.keys(yarnSummary).forEach(yName => {
+                const li = document.createElement("li");
+                const w = yarnSummary[yName].weight;
+                const b = yarnSummary[yName].box;
+                const colorStyle = w < 0 ? "color:#dc2626;" : "";
+                li.innerHTML = `<span style="${colorStyle}"><strong>${yName}</strong>: ${w.toFixed(2)} kg (${b.toFixed(1)} 箱)</span>`;
+                detailList.appendChild(li);
+            });
+        }
+    };
+
+    // 處理圖片上傳與壓縮
+    window.handleImageUpload = function(event) {
+        const file = event.target.files[0];
+        const statusDiv = document.getElementById("imageUploadStatus");
+        if (!file) return;
+
+        statusDiv.innerText = "⏳ 圖片處理中...";
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = new Image();
+            img.onload = function() {
+                const canvas = document.createElement("canvas");
+                const MAX_WIDTH = 1000;
+                let width = img.width;
+                let height = img.height;
+
+                if (width > MAX_WIDTH) {
+                    height *= MAX_WIDTH / width;
+                    width = MAX_WIDTH;
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext("2d");
+                ctx.drawImage(img, 0, 0, width, height);
+
+                const base64Str = canvas.toDataURL("image/jpeg", 0.7);
+                document.getElementById("imageDataBase64").value = base64Str;
+                statusDiv.innerText = "✅ 照片處理完成";
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    };
+
+    // 渲染表格
+    window.renderTable = function() {
+        const selectedCustomer = document.getElementById("filterCustomer").value;
+        const keyword = document.getElementById("filterKeyword").value.toLowerCase().trim();
+        const tbody = document.getElementById("yarnTableBody");
+        tbody.innerHTML = "";
+
+        const keys = Object.keys(yarnDataMap);
+        currentRenderedYarn = [];
+
+        keys.forEach(key => {
+            const item = yarnDataMap[key];
+            const matchCustomer = !selectedCustomer || item.customerName === selectedCustomer;
+            const matchKeyword = !keyword ||
+                item.customerName.toLowerCase().includes(keyword) ||
+                item.yarnType.toLowerCase().includes(keyword) ||
+                (item.yarnBatch && item.yarnBatch.toLowerCase().includes(keyword)) ||
+                (item.remark && item.remark.toLowerCase().includes(keyword));
+
+            if (matchCustomer && matchKeyword) {
+                currentRenderedYarn.push({ key, ...item });
+            }
+        });
+
+        // 依日期排序 (最新在最上面)
+        currentRenderedYarn.sort((a,b) => new Date(b.recordDate) - new Date(a.recordDate));
+
+        if (currentRenderedYarn.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="10" class="no-data">目前無符合條件的紗帳資料</td></tr>';
+            return;
+        }
+
+        currentRenderedYarn.forEach(item => {
+            const isImport = item.actionType === "進紗";
+            const badgeClass = isImport ? "color:#10b981; font-weight:700;" : "color:#ef4444; font-weight:700;";
+            const pkg = item.packageCount ? `${item.packageCount} 件` : "-";
+            const box = item.boxCount ? `${item.boxCount} 箱` : "-";
+
+            const imgHtml = item.image 
+                ? `<img src="${item.image}" class="img-preview" onclick="openModal('${item.image}')">`
+                : `<span style="color:#94a3b8;">無照片</span>`;
+
+            const row = document.createElement("tr");
+            row.innerHTML = `
+                <td>${imgHtml}</td>
+                <td><strong>${item.recordDate || "-"}</strong></td>
+                <td><strong>${item.customerName}</strong></td>
+                <td><span style="${badgeClass}">${item.actionType}</span></td>
+                <td>${item.yarnType}</td>
+                <td><strong>${item.yarnWeight} kg</strong></td>
+                <td>${pkg} / ${box}</td>
+                <td>${item.yarnBatch || "-"}</td>
+                <td>${item.remark || "-"}</td>
+                <td>
+                    <button class="btn-primary" style="padding: 4px 8px; font-size: 0.85rem;" onclick="editYarn('${item.key}')">編輯</button>
+                    <button class="btn-danger" onclick="deleteYarn('${item.key}')">刪除</button>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+    };
+
+    // 儲存表單
+    document.getElementById("yarnForm").addEventListener("submit", function(e) {
+        e.preventDefault();
+
+        const editKey = document.getElementById("editKey").value;
+
+        const yarnData = {
+            customerName: document.getElementById("customerName").value.trim(),
+            recordDate: document.getElementById("recordDate").value,
+            actionType: document.getElementById("actionType").value,
+            yarnType: document.getElementById("yarnType").value.trim(),
+            yarnWeight: parseFloat(document.getElementById("yarnWeight").value) || 0,
+            packageCount: document.getElementById("packageCount").value ? parseFloat(document.getElementById("packageCount").value) : "",
+            boxCount: document.getElementById("boxCount").value ? parseFloat(document.getElementById("boxCount").value) : "",
+            yarnBatch: document.getElementById("yarnBatch").value.trim(),
+            remark: document.getElementById("remark").value.trim(),
+            image: document.getElementById("imageDataBase64").value || ""
+        };
+
+        if (!editKey) {
+            push(yarnRef, yarnData);
+        } else {
+            set(ref(db, `yarnRecords/${editKey}`), yarnData);
+        }
+
+        resetForm();
+    });
+
+    window.editYarn = function(key) {
+        const item = yarnDataMap[key];
+        document.getElementById("editKey").value = key;
+        document.getElementById("customerName").value = item.customerName;
+        document.getElementById("recordDate").value = item.recordDate;
+        document.getElementById("actionType").value = item.actionType;
+        document.getElementById("yarnType").value = item.yarnType;
+        document.getElementById("yarnWeight").value = item.yarnWeight;
+        document.getElementById("packageCount").value = item.packageCount || "";
+        document.getElementById("boxCount").value = item.boxCount || "";
+        document.getElementById("yarnBatch").value = item.yarnBatch || "";
+        document.getElementById("remark").value = item.remark || "";
+        document.getElementById("imageDataBase64").value = item.image || "";
+
+        document.getElementById("formTitle").innerText = "✏️ 編輯紗帳紀錄";
+        document.getElementById("saveBtn").innerText = "更新進出紀錄";
+        document.getElementById("cancelBtn").style.display = "inline-flex";
+
+        updateStockSummary();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    window.deleteYarn = function(key) {
+        if (confirm("確定要刪除這筆紗帳紀錄嗎？這將會影響庫存計算。")) {
+            remove(ref(db, `yarnRecords/${key}`));
+        }
+    };
+
+    window.resetForm = function() {
+        document.getElementById("yarnForm").reset();
+        document.getElementById("editKey").value = "";
+        document.getElementById("imageDataBase64").value = "";
+        document.getElementById("imageUploadStatus").innerText = "";
+        document.getElementById("recordDate").valueAsDate = new Date();
+        document.getElementById("formTitle").innerText = "📝 新增紗帳進出紀錄";
+        document.getElementById("saveBtn").innerText = "儲存進出紀錄至雲端";
+        document.getElementById("cancelBtn").style.display = "none";
+        updateStockSummary();
+    };
+
+    window.openModal = function(imgSrc) {
+        document.getElementById("modalImg").src = imgSrc;
+        document.getElementById("imageModal").style.display = "flex";
+    };
+
+    window.closeModal = function() {
+        document.getElementById("imageModal").style.display = "none";
+    };
+
+    window.exportYarnToExcel = function() {
+        if (currentRenderedYarn.length === 0) {
+            alert("目前沒有紗帳紀錄可供匯出！");
+            return;
+        }
+
+        const excelData = currentRenderedYarn.map(item => ({
+            "日期": item.recordDate,
+            "客戶名稱": item.customerName,
+            "類別": item.actionType,
+            "紗種規格": item.yarnType,
+            "重量 (kg)": item.yarnWeight,
+            "件數": item.packageCount || "",
+            "箱數": item.boxCount || "",
+            "批號/廠牌": item.yarnBatch || "",
+            "備註": item.remark || ""
+        }));
+
+        const worksheet = XLSX.utils.json_to_sheet(excelData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "紗帳進出報表");
+
+        const custLabel = document.getElementById("filterCustomer").value || "全部客戶";
+        XLSX.writeFile(workbook, `德峰紗帳報表_${custLabel}.xlsx`);
+    };
+</script>
+
+</body>
+</html>
