@@ -3,86 +3,560 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>訂單系統</title>
+    <title>德峰訂單管理系統</title>
+    <!-- 載入 SheetJS 以支援 Excel 匯出 -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
         :root {
-            --primary-color: #2563eb;
+            --primary: #2563eb;
             --primary-hover: #1d4ed8;
-            --bg-color: #f8fafc;
+            --success: #10b981;
+            --success-hover: #059669;
+            --danger: #ef4444;
+            --danger-hover: #dc2626;
+            --excel: #16a34a;
+            --excel-hover: #15803d;
+            --bg: #f8fafc;
             --card-bg: #ffffff;
-            --text-color: #1e293b;
-            --border-color: #e2e8f0;
+            --text-main: #0f172a;
+            --text-sub: #475569;
+            --border: #cbd5e1;
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
+            background-color: var(--bg);
+            color: var(--text-main);
             margin: 0;
-            padding: 20px;
+            padding: 0;
             display: flex;
-            justify-content: center;
-        }
-
-        .container {
-            width: 100%;
-            max-width: 900px;
-            background: var(--card-bg);
-            padding: 24px;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            flex-direction: column;
+            min-height: 100vh;
         }
 
         .header {
+            background: linear-gradient(135deg, var(--primary), #3b82f6);
+            color: white;
+            padding: 16px 32px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 2px solid var(--border-color);
-            padding-bottom: 16px;
-            margin-bottom: 24px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
         }
 
         .header h1 {
             margin: 0;
             font-size: 1.5rem;
-            color: var(--text-color);
+            font-weight: 700;
+        }
+
+        .status-badge {
+            background-color: #d1fae5;
+            color: #065f46;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
         }
 
         .btn-switch-system {
-            background-color: var(--primary-color);
+            background-color: rgba(255, 255, 255, 0.2);
             color: white;
+            border: 1px solid rgba(255, 255, 255, 0.5);
             padding: 8px 16px;
-            text-decoration: none;
-            border-radius: 6px;
-            font-weight: bold;
+            border-radius: 8px;
             font-size: 0.9rem;
-            transition: background-color 0.2s ease;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
         }
 
         .btn-switch-system:hover {
-            background-color: var(--primary-hover);
+            background-color: white;
+            color: var(--primary);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
         }
 
-        .content {
-            padding: 10px 0;
+        .main-container {
+            padding: 20px 24px;
+            display: grid;
+            grid-template-columns: 420px minmax(0, 1fr);
+            gap: 20px;
+            align-items: start;
         }
+
+        @media (max-width: 1100px) {
+            .main-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            margin-bottom: 20px;
+        }
+
+        .card-title {
+            margin-top: 0;
+            margin-bottom: 16px;
+            color: var(--primary);
+            font-size: 1.15rem;
+            font-weight: 700;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #f1f5f9;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .full-width {
+            grid-column: span 2;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-sub);
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 9px 11px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.9rem;
+            outline: none;
+            background-color: #f8fafc;
+            box-sizing: border-box;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            border-color: var(--primary);
+            background-color: #fff;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            padding: 10px 18px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .btn-primary { background-color: var(--primary); color: white; }
+        .btn-primary:hover { background-color: var(--primary-hover); }
+
+        .btn-success { background-color: var(--success); color: white; width: 100%; }
+        .btn-success:hover { background-color: var(--success-hover); }
+
+        .btn-excel { background-color: var(--excel); color: white; white-space: nowrap; }
+        .btn-excel:hover { background-color: var(--excel-hover); }
+
+        .btn-danger { background-color: var(--danger); color: white; padding: 4px 8px; font-size: 0.85rem; }
+        .btn-danger:hover { background-color: var(--danger-hover); }
+
+        .right-column {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            min-width: 0;
+        }
+
+        .filter-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr auto;
+            gap: 12px;
+            align-items: end;
+        }
+
+        @media (max-width: 768px) {
+            .filter-grid { grid-template-columns: 1fr; }
+        }
+
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            text-align: left;
+            font-size: 0.9rem;
+        }
+
+        th {
+            background-color: #f8fafc;
+            color: var(--text-sub);
+            font-weight: 600;
+            padding: 10px 12px;
+            border-bottom: 2px solid var(--border);
+            white-space: nowrap;
+        }
+
+        td {
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-main);
+            vertical-align: middle;
+        }
+
+        tbody tr:hover { background-color: #f8fafc; }
+
+        .no-data { text-align: center; color: #94a3b8; padding: 32px; }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <!-- 頂部導覽列：包含系統名稱與切換按鈕 -->
-        <div class="header">
-            <h1>📋 訂單系統</h1>
-            <a href="yarn_system.html" class="btn-switch-system">📦 切換至紗帳系統 ➔</a>
+<div class="header">
+    <div class="header-left">
+        <h1>📋 德峰訂單管理系統</h1>
+        <span class="status-badge">🟢 雲端連線中</span>
+    </div>
+    <a href="yarn_system.html" class="btn-switch-system">📦 切換至紗帳系統 ➔</a>
+</div>
+
+<div class="main-container">
+
+    <div class="card">
+        <h2 class="card-title" id="formTitle">📝 新增訂單資料</h2>
+        <form id="orderForm">
+            <input type="hidden" id="editKey" value="">
+
+            <div class="form-grid">
+                
+                <div class="form-group full-width">
+                    <label for="customerName">客戶名稱</label>
+                    <input type="text" id="customerName" list="customerDatalist" required placeholder="點選選單或輸入名稱..." onfocus="this.select()">
+                    <datalist id="customerDatalist"></datalist>
+                </div>
+
+                <div class="form-group">
+                    <label for="orderDate">訂單日期</label>
+                    <input type="date" id="orderDate" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="deliveryDate">預計交期</label>
+                    <input type="date" id="deliveryDate">
+                </div>
+
+                <div class="form-group full-width">
+                    <label for="fabricType">布種 / 規格</label>
+                    <input type="text" id="fabricType" required placeholder="例如：雙面單面布、網眼布">
+                </div>
+
+                <div class="form-group">
+                    <label for="quantity">數量 (條/匹)</label>
+                    <input type="number" step="0.1" id="quantity" required placeholder="例如：100">
+                </div>
+
+                <div class="form-group">
+                    <label for="unit">單位</label>
+                    <select id="unit">
+                        <option value="條">條</option>
+                        <option value="匹">匹</option>
+                        <option value="kg">kg</option>
+                    </select>
+                </div>
+
+                <div class="form-group full-width">
+                    <label for="remark">備註說明</label>
+                    <textarea id="remark" rows="3" placeholder="加工要求、顏色標記等..."></textarea>
+                </div>
+
+            </div>
+
+            <div class="btn-group">
+                <button type="submit" class="btn-success" id="saveBtn">儲存訂單資料</button>
+                <button type="button" class="btn-primary" id="cancelBtn" style="display:none; background-color: #64748b;" onclick="resetForm()">取消修改</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="right-column">
+        
+        <div class="card">
+            <h2 class="card-title">🔍 訂單資料查詢與篩選</h2>
+            <div class="filter-grid">
+                <div class="form-group">
+                    <label for="filterCustomer">依客戶篩選</label>
+                    <select id="filterCustomer" onchange="renderTable()">
+                        <option value="">-- 全部客戶 --</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="filterKeyword">關鍵字搜尋</label>
+                    <input type="text" id="filterKeyword" placeholder="搜尋布種、備註..." oninput="renderTable()">
+                </div>
+                <div>
+                    <button class="btn-excel" onclick="exportOrdersToExcel()">📄 匯出 Excel 訂單報表</button>
+                </div>
+            </div>
         </div>
 
-        <!-- 系統主體內容區域 -->
-        <div class="content">
-            <p>歡迎使用訂單系統！您可以在此管理所有的訂單項目。</p>
-            <!-- 您的訂單系統主要功能區域請放置於此 -->
+        <div class="card">
+            <h2 class="card-title">📊 訂單歷史明細清單</h2>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>訂單日期</th>
+                            <th>預計交期</th>
+                            <th>客戶名稱</th>
+                            <th>布種 / 規格</th>
+                            <th>數量</th>
+                            <th>備註</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="orderTableBody">
+                        <tr><td colspan="7" class="no-data">載入訂單資料中...</td></tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
+
     </div>
+
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getDatabase, ref, push, set, remove, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyAR1sHUr3Yx6z2-EdPxvnKk50X4XL0-wR4",
+        authDomain: "defong-ab039.firebaseapp.com",
+        databaseURL: "https://defong-ab039-default-rtdb.firebaseio.com",
+        projectId: "defong-ab039",
+        storageBucket: "defong-ab039.firebasestorage.app",
+        messagingSenderId: "751338216702",
+        appId: "1:751338216702:web:1892c102b6565c8543d9af",
+        measurementId: "G-ZTV82ZDYSV"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    
+    const orderRef = ref(db, 'orderRecords');
+    const yarnRef = ref(db, 'yarnRecords');
+
+    let orderDataMap = {};
+    let yarnDataMap = {};
+    let currentRenderedOrders = [];
+
+    window.onload = function() {
+        document.getElementById("orderDate").valueAsDate = new Date();
+    };
+
+    onValue(orderRef, (snapshot) => {
+        orderDataMap = snapshot.val() || {};
+        updateCustomerDropdowns();
+        renderTable();
+    });
+
+    onValue(yarnRef, (snapshot) => {
+        yarnDataMap = snapshot.val() || {};
+        updateCustomerDropdowns();
+    });
+
+    function updateCustomerDropdowns() {
+        const customers = new Set();
+        Object.values(orderDataMap).forEach(i => i.customerName && customers.add(i.customerName.trim()));
+        Object.values(yarnDataMap).forEach(i => i.customerName && customers.add(i.customerName.trim()));
+
+        const sortedCustomers = Array.from(customers).sort();
+
+        const datalist = document.getElementById("customerDatalist");
+        datalist.innerHTML = "";
+        sortedCustomers.forEach(c => {
+            const opt = document.createElement("option");
+            opt.value = c;
+            datalist.appendChild(opt);
+        });
+
+        const filterSelect = document.getElementById("filterCustomer");
+        const currentVal = filterSelect.value;
+        filterSelect.innerHTML = '<option value="">-- 全部客戶 --</option>';
+        sortedCustomers.forEach(c => {
+            const opt = document.createElement("option");
+            opt.value = c;
+            opt.textContent = c;
+            filterSelect.appendChild(opt);
+        });
+        filterSelect.value = currentVal;
+    }
+
+    window.renderTable = function() {
+        const selectedCustomer = document.getElementById("filterCustomer").value;
+        const keyword = document.getElementById("filterKeyword").value.toLowerCase().trim();
+        const tbody = document.getElementById("orderTableBody");
+        tbody.innerHTML = "";
+
+        currentRenderedOrders = [];
+
+        Object.keys(orderDataMap).forEach(key => {
+            const item = orderDataMap[key];
+            const matchCustomer = !selectedCustomer || item.customerName === selectedCustomer;
+            const matchKeyword = !keyword ||
+                item.customerName.toLowerCase().includes(keyword) ||
+                item.fabricType.toLowerCase().includes(keyword) ||
+                (item.remark && item.remark.toLowerCase().includes(keyword));
+
+            if (matchCustomer && matchKeyword) {
+                currentRenderedOrders.push({ key, ...item });
+            }
+        });
+
+        currentRenderedOrders.sort((a,b) => new Date(b.orderDate) - new Date(a.orderDate));
+
+        if (currentRenderedOrders.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="no-data">目前無符合條件的訂單資料</td></tr>';
+            return;
+        }
+
+        currentRenderedOrders.forEach(item => {
+            const row = document.createElement("tr");
+            row.innerHTML = `
+                <td><strong>${item.orderDate || "-"}</strong></td>
+                <td>${item.deliveryDate || "-"}</td>
+                <td><strong>${item.customerName}</strong></td>
+                <td>${item.fabricType}</td>
+                <td><strong>${item.quantity} ${item.unit || "條"}</strong></td>
+                <td>${item.remark || "-"}</td>
+                <td>
+                    <button class="btn-primary" style="padding: 4px 8px; font-size: 0.85rem;" onclick="editOrder('${item.key}')">編輯</button>
+                    <button class="btn-danger" onclick="deleteOrder('${item.key}')">刪除</button>
+                </td>
+            `;
+            tbody.appendChild(row);
+        });
+    };
+
+    document.getElementById("orderForm").addEventListener("submit", function(e) {
+        e.preventDefault();
+
+        const editKey = document.getElementById("editKey").value;
+
+        const orderData = {
+            customerName: document.getElementById("customerName").value.trim(),
+            orderDate: document.getElementById("orderDate").value,
+            deliveryDate: document.getElementById("deliveryDate").value,
+            fabricType: document.getElementById("fabricType").value.trim(),
+            quantity: parseFloat(document.getElementById("quantity").value) || 0,
+            unit: document.getElementById("unit").value,
+            remark: document.getElementById("remark").value.trim()
+        };
+
+        if (!editKey) {
+            push(orderRef, orderData);
+        } else {
+            set(ref(db, `orderRecords/${editKey}`), orderData);
+        }
+
+        resetForm();
+    });
+
+    window.editOrder = function(key) {
+        const item = orderDataMap[key];
+        document.getElementById("editKey").value = key;
+        document.getElementById("customerName").value = item.customerName;
+        document.getElementById("orderDate").value = item.orderDate;
+        document.getElementById("deliveryDate").value = item.deliveryDate || "";
+        document.getElementById("fabricType").value = item.fabricType;
+        document.getElementById("quantity").value = item.quantity;
+        document.getElementById("unit").value = item.unit || "條";
+        document.getElementById("remark").value = item.remark || "";
+
+        document.getElementById("formTitle").innerText = "✏️ 編輯訂單資料";
+        document.getElementById("saveBtn").innerText = "更新訂單資料";
+        document.getElementById("cancelBtn").style.display = "inline-flex";
+
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    window.deleteOrder = function(key) {
+        if (confirm("確定要刪除這筆訂單資料嗎？")) {
+            remove(ref(db, `orderRecords/${key}`));
+        }
+    };
+
+    window.resetForm = function() {
+        document.getElementById("orderForm").reset();
+        document.getElementById("editKey").value = "";
+        document.getElementById("orderDate").valueAsDate = new Date();
+        document.getElementById("formTitle").innerText = "📝 新增訂單資料";
+        document.getElementById("saveBtn").innerText = "儲存訂單資料";
+        document.getElementById("cancelBtn").style.display = "none";
+    };
+
+    window.exportOrdersToExcel = function() {
+        if (currentRenderedOrders.length === 0) {
+            alert("目前沒有訂單紀錄可供匯出！");
+            return;
+        }
+
+        const excelData = currentRenderedOrders.map(item => ({
+            "訂單日期": item.orderDate,
+            "預計交期": item.deliveryDate || "",
+            "客戶名稱": item.customerName,
+            "布種/規格": item.fabricType,
+            "數量": item.quantity,
+            "單位": item.unit || "條",
+            "備註": item.remark || ""
+        }));
+
+        const worksheet = XLSX.utils.json_to_sheet(excelData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "訂單報表");
+
+        const custLabel = document.getElementById("filterCustomer").value || "全部客戶";
+        XLSX.writeFile(workbook, `德峰訂單報表_${custLabel}.xlsx`);
+    };
+</script>
 
 </body>
 </html>
