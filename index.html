@@ -364,12 +364,12 @@
 
                     <div class="form-group">
                         <label for="machineInch">機台吋數</label>
-                        <input type="text" id="machineInch" placeholder="例如：30吋">
+                        <input type="text" id="machineInch" placeholder="例如：30&quot;">
                     </div>
 
                     <div class="form-group">
                         <label for="machineNeedle">機台針數</label>
-                        <input type="text" id="machineNeedle" placeholder="例如：24針">
+                        <input type="text" id="machineNeedle" placeholder="例如：24G">
                     </div>
 
                     <div class="form-group">
@@ -511,6 +511,19 @@
         document.getElementById("orderDate").valueAsDate = new Date();
     };
 
+    // 格式化單位輔助函式
+    function formatInch(val) {
+        if (!val) return '';
+        const clean = val.toString().replace(/["吋]/g, '').trim();
+        return clean ? `${clean}"` : '';
+    }
+
+    function formatNeedle(val) {
+        if (!val) return '';
+        const clean = val.toString().replace(/[Gg針]/g, '').trim();
+        return clean ? `${clean}G` : '';
+    }
+
     // 監聽訂單資料
     onValue(orderRef, (snapshot) => {
         orderDataMap = snapshot.val() || {};
@@ -602,7 +615,6 @@
         reader.onload = function(e) {
             const img = new Image();
             img.onload = function() {
-                // 限制最大寬高以縮減數據大小，確保順暢寫入 Database
                 const maxWidth = 800;
                 const maxHeight = 800;
                 let width = img.width;
@@ -626,7 +638,6 @@
                 const ctx = canvas.getContext("2d");
                 ctx.drawImage(img, 0, 0, width, height);
 
-                // 以 JPEG 格式壓縮 (品質 0.7)
                 currentBase64Photo = canvas.toDataURL("image/jpeg", 0.7);
                 document.getElementById("photoPreviewImg").src = currentBase64Photo;
                 document.getElementById("photoPreviewArea").style.display = "flex";
@@ -685,9 +696,12 @@
         currentRenderedOrders.forEach(item => {
             const row = document.createElement("tr");
 
+            const formattedInch = formatInch(item.machineInch);
+            const formattedNeedle = formatNeedle(item.machineNeedle);
+
             const specs = [
-                item.machineInch ? `${item.machineInch}` : '',
-                item.machineNeedle ? `${item.machineNeedle}` : '',
+                formattedInch,
+                formattedNeedle,
                 item.feederCount ? `${item.feederCount}口` : ''
             ].filter(Boolean).join(' / ') || '-';
 
@@ -730,20 +744,23 @@
         if (customYarn) checkedYarns.push(customYarn);
         const finalYarnType = checkedYarns.join('、');
 
+        const rawInch = document.getElementById("machineInch").value.trim();
+        const rawNeedle = document.getElementById("machineNeedle").value.trim();
+
         const orderData = {
             customerName: document.getElementById("customerName").value.trim(),
             orderDate: document.getElementById("orderDate").value,
             deliveryDate: document.getElementById("deliveryDate").value,
             fabricType: document.getElementById("fabricType").value.trim(),
             widthWeight: document.getElementById("widthWeight").value.trim(),
-            machineInch: document.getElementById("machineInch").value.trim(),
-            machineNeedle: document.getElementById("machineNeedle").value.trim(),
+            machineInch: formatInch(rawInch),
+            machineNeedle: formatNeedle(rawNeedle),
             feederCount: document.getElementById("feederCount").value.trim(),
             quantity: parseFloat(document.getElementById("quantity").value) || 0,
             yarnType: finalYarnType,
             color: document.getElementById("color").value.trim(),
             dyeingFactory: document.getElementById("dyeingFactory").value.trim(),
-            photoBase64: currentBase64Photo, // 保存照片 Base64 數據
+            photoBase64: currentBase64Photo,
             remark: document.getElementById("remark").value.trim()
         };
 
@@ -766,8 +783,8 @@
         document.getElementById("deliveryDate").value = item.deliveryDate || "";
         document.getElementById("fabricType").value = item.fabricType || "";
         document.getElementById("widthWeight").value = item.widthWeight || "";
-        document.getElementById("machineInch").value = item.machineInch || "";
-        document.getElementById("machineNeedle").value = item.machineNeedle || "";
+        document.getElementById("machineInch").value = formatInch(item.machineInch || "");
+        document.getElementById("machineNeedle").value = formatNeedle(item.machineNeedle || "");
         document.getElementById("feederCount").value = item.feederCount || "";
         document.getElementById("quantity").value = item.quantity;
         document.getElementById("color").value = item.color || "";
@@ -831,8 +848,8 @@
             "客戶名稱": item.customerName,
             "布種/規格": item.fabricType,
             "幅寬/碼重": item.widthWeight || "",
-            "機台吋數": item.machineInch || "",
-            "機台針數": item.machineNeedle || "",
+            "機台吋數": formatInch(item.machineInch || ""),
+            "機台針數": formatNeedle(item.machineNeedle || ""),
             "口數": item.feederCount || "",
             "數量(kg)": item.quantity,
             "紗種": item.yarnType || "",
