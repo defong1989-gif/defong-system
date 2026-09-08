@@ -1,0 +1,1400 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>客戶名單管理系統 - 德峰針織實業有限公司</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- SheetJS Excel Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- Google Fonts Noto Sans TC -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&family=Noto+Serif+TC:wght@600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Noto Sans TC', 'sans-serif'],
+                        serif: ['Noto Serif TC', 'serif']
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <style>
+        body { font-family: 'Noto Sans TC', sans-serif; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .fade-in { animation: fadeIn 0.2s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+        .font-kai {
+            font-family: 'DFKai-SB', 'BiauKai', 'Kaiti TC', 'KaiTi', 'STKaiti', serif !important;
+        }
+
+        .writing-mode-vertical {
+            writing-mode: vertical-rl;
+            text-orientation: upright;
+        }
+
+        @page {
+            size: auto;
+            margin: 0mm;
+        }
+
+        @media print {
+            @page {
+                size: auto;
+                margin: 0mm;
+            }
+            html, body {
+                margin: 0 !important;
+                padding: 0 !important;
+                background: white !important;
+            }
+            body > *:not(#printEnvelopeArea) {
+                display: none !important;
+            }
+            #printEnvelopeArea {
+                display: block !important;
+                visibility: visible !important;
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                background: white !important;
+            }
+            .envelope-page {
+                page-break-before: auto;
+                page-break-after: always !important;
+                break-after: page !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+                box-sizing: border-box;
+                margin: 0 auto;
+                padding: 10mm 12mm;
+                background: white !important;
+                position: relative;
+                overflow: hidden;
+                border: none !important;
+                box-shadow: none !important;
+            }
+            .envelope-page.envelope-vertical {
+                width: 103mm;
+                height: 218mm;
+            }
+            .envelope-page.envelope-horizontal {
+                width: 218mm;
+                height: 103mm;
+            }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+    <header class="bg-slate-900 text-white shadow-md sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="bg-brand-500 p-2 rounded-lg text-white">
+                    <i class="fa-solid fa-address-book text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-tight tracking-wide">客戶名單管理系統</h1>
+                    <p class="text-xs text-slate-400">德峰針織實業有限公司 | 紗帳與訂單連動</p>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-2 flex-wrap">
+                <a href="yarn_system.html" target="_blank" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-medium flex items-center gap-1.5 transition shadow">
+                    <i class="fa-solid fa-scroll"></i>
+                    <span>紗帳系統</span>
+                </a>
+                <a href="index.html" target="_blank" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-medium flex items-center gap-1.5 transition shadow">
+                    <i class="fa-solid fa-cart-shopping"></i>
+                    <span>訂單系統</span>
+                </a>
+                <button onclick="openIntegrationModal()" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-medium flex items-center gap-1.5 transition shadow">
+                    <i class="fa-solid fa-link"></i>
+                    <span>跨系統連動語法</span>
+                </button>
+                <button onclick="exportExcel()" class="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-medium flex items-center gap-1.5 transition shadow">
+                    <i class="fa-solid fa-file-excel"></i>
+                    <span>下載 Excel 檔</span>
+                </button>
+                <label class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg text-xs font-medium flex items-center gap-1.5 transition cursor-pointer">
+                    <i class="fa-solid fa-upload"></i>
+                    <span>匯入</span>
+                    <input type="file" id="importFile" accept=".json" onchange="importJSON(event)" class="hidden">
+                </label>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col gap-5">
+
+        <!-- Top Metrics Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+                <div>
+                    <p class="text-xs text-slate-500 font-medium">總客戶資料筆數</p>
+                    <h3 id="statTotal" class="text-2xl font-bold text-slate-800 mt-1">0</h3>
+                </div>
+                <div class="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-users"></i>
+                </div>
+            </div>
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+                <div>
+                    <p class="text-xs text-slate-500 font-medium">布商夥伴</p>
+                    <h3 id="statFabric" class="text-2xl font-bold text-emerald-600 mt-1">0</h3>
+                </div>
+                <div class="w-10 h-10 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-scroll"></i>
+                </div>
+            </div>
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+                <div>
+                    <p class="text-xs text-slate-500 font-medium">紗商夥伴</p>
+                    <h3 id="statYarn" class="text-2xl font-bold text-amber-600 mt-1">0</h3>
+                </div>
+                <div class="w-10 h-10 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-industry"></i>
+                </div>
+            </div>
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+                <div>
+                    <p class="text-xs text-slate-500 font-medium">其他類別</p>
+                    <h3 id="statOther" class="text-2xl font-bold text-purple-600 mt-1">0</h3>
+                </div>
+                <div class="w-10 h-10 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-layer-group"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filter & Search Toolbar -->
+        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row gap-3 items-center justify-between">
+            <div class="flex flex-1 flex-col sm:flex-row gap-3 w-full md:w-auto">
+                <div class="relative flex-1">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-slate-400 text-sm"></i>
+                    <input type="text" id="searchInput" oninput="filterData()" placeholder="搜尋客戶名稱、統編、電話、聯絡人、備註..." 
+                        class="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-brand-500">
+                </div>
+
+                <select id="categoryFilter" onchange="filterData()" class="px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                    <option value="ALL">全部類別</option>
+                    <option value="布商">布商</option>
+                    <option value="紗商">紗商</option>
+                    <option value="其他">其他</option>
+                </select>
+            </div>
+
+            <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+                <button onclick="resetFilters()" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-sm font-medium transition flex items-center gap-1">
+                    <i class="fa-solid fa-rotate-left"></i>
+                    <span>重置</span>
+                </button>
+                <button onclick="openEnvelopeModal()" class="px-3.5 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-semibold shadow transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-envelope-open-text"></i>
+                    <span>列印信封格式</span>
+                </button>
+                <button onclick="openCustomerModal()" class="px-4 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-sm font-semibold shadow transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-plus"></i>
+                    <span>新增客戶資料</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
+            <div class="overflow-x-auto custom-scrollbar">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-100/80 border-b border-slate-200 text-slate-600 text-xs uppercase tracking-wider font-semibold">
+                            <th class="py-3 px-4 w-28">客戶類別</th>
+                            <th class="py-3 px-4 w-28">統一編號</th>
+                            <th class="py-3 px-4 min-w-[160px]">客戶/公司名稱</th>
+                            <th class="py-3 px-4 w-36">公司電話</th>
+                            <th class="py-3 px-4 w-28">傳真</th>
+                            <th class="py-3 px-4 min-w-[200px]">主要聯絡人與分機</th>
+                            <th class="py-3 px-4 min-w-[200px]">地址</th>
+                            <th class="py-3 px-4 min-w-[160px]">備註說明</th>
+                            <th class="py-3 px-4 w-24 text-center">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="customerTableBody" class="divide-y divide-slate-100">
+                        <!-- Dynamic Table Content -->
+                    </tbody>
+                </table>
+            </div>
+            <div class="p-3 bg-slate-50 border-t border-slate-200 text-xs text-slate-500 flex justify-between items-center">
+                <span id="recordCountText">顯示 0 / 0 筆資料</span>
+                <span class="text-[11px] text-slate-400">數據儲存於本機瀏覽器並自動進行多頁籤與跨系統廣播同步</span>
+            </div>
+        </div>
+    </main>
+
+    <div id="customerModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-2xl overflow-hidden fade-in max-h-[90vh] flex flex-col">
+            <div class="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
+                <h3 id="modalTitle" class="text-base font-bold flex items-center gap-2">
+                    <i class="fa-solid fa-user-plus text-brand-500"></i>
+                    <span>新增客戶資料</span>
+                </h3>
+                <button onclick="closeCustomerModal()" class="text-slate-400 hover:text-white transition text-lg">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <form id="customerForm" onsubmit="saveCustomer(event)" class="p-6 space-y-4 overflow-y-auto custom-scrollbar flex-1">
+                <input type="hidden" id="customerId">
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="col-span-1 sm:col-span-2">
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">客戶 / 公司抬頭名稱 <span class="text-rose-500">*</span></label>
+                        <input type="text" id="fieldTaxName" required placeholder="例如：正湧紡織股份有限公司" 
+                            class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">客戶分類 <span class="text-rose-500">*</span></label>
+                        <select id="fieldCategory" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                            <option value="布商">布商</option>
+                            <option value="紗商">紗商</option>
+                            <option value="其他">其他</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">統一編號</label>
+                        <input type="text" id="fieldTaxId" placeholder="例如：12345678" 
+                            class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">公司電話號碼</label>
+                        <input type="text" id="fieldPhone" placeholder="例如：(02) 2981-6600" 
+                            class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">傳真號碼</label>
+                        <input type="text" id="fieldFax" placeholder="例如：(02) 2981-7700" 
+                            class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                    </div>
+
+                    <!-- Dynamic Contact Persons Section -->
+                    <div class="col-span-1 sm:col-span-2 border-t border-b border-slate-200 py-3 my-1">
+                        <div class="flex items-center justify-between mb-2">
+                            <label class="block text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                                <i class="fa-solid fa-users text-brand-600"></i>
+                                <span>聯絡人與分機設定 (可新增多位聯絡人)</span>
+                            </label>
+                            <button type="button" onclick="addContactRow()" class="px-2.5 py-1 bg-brand-50 text-brand-600 hover:bg-brand-100 rounded-md text-xs font-semibold transition flex items-center gap-1">
+                                <i class="fa-solid fa-plus text-[10px]"></i>
+                                <span>新增聯絡人</span>
+                            </button>
+                        </div>
+
+                        <div id="contactsContainer" class="space-y-2">
+                            <!-- Dynamic Contact Rows -->
+                        </div>
+                    </div>
+
+                    <div class="col-span-1 sm:col-span-2">
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">電子郵件 (E-mail)</label>
+                        <input type="email" id="fieldEmail" placeholder="service@example.com" 
+                            class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                    </div>
+
+                    <div class="col-span-1 sm:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">郵遞區號</label>
+                            <input type="text" id="fieldZipCode" placeholder="例如：241" maxlength="6"
+                                class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                        </div>
+                        <div class="sm:col-span-2">
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">公司/送貨地址</label>
+                            <input type="text" id="fieldAddress" placeholder="新北市三重區..." 
+                                class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none">
+                        </div>
+                    </div>
+
+                    <div class="col-span-1 sm:col-span-2">
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">備註說明</label>
+                        <textarea id="fieldNotes" rows="2" placeholder="產品偏好、交易條件或其他特殊記事..." 
+                            class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-brand-500 focus:outline-none"></textarea>
+                    </div>
+                </div>
+
+                <div class="pt-3 border-t border-slate-200 flex items-center justify-end gap-2">
+                    <button type="button" onclick="closeCustomerModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-medium transition">取消</button>
+                    <button type="submit" class="px-5 py-2 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-xs font-semibold shadow transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-floppy-disk"></i>
+                        <span>儲存資料</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="envelopeModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-5xl overflow-hidden fade-in flex flex-col max-h-[92vh]">
+            <div class="bg-purple-950 text-white px-6 py-4 flex items-center justify-between">
+                <h3 class="text-base font-bold flex items-center gap-2">
+                    <i class="fa-solid fa-envelope-open-text text-purple-400"></i>
+                    <span>標準信封格式列印與預覽確認</span>
+                </h3>
+                <button onclick="closeEnvelopeModal()" class="text-slate-400 hover:text-white transition text-lg">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="p-6 overflow-y-auto custom-scrollbar flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- Left Column: Customer Selection & Settings -->
+                <div class="lg:col-span-5 space-y-4 border-r border-slate-200 pr-0 lg:pr-4">
+                    <h4 class="font-bold text-slate-800 text-sm flex items-center justify-between">
+                        <span>1. 選擇列印客戶 (可多選)</span>
+                        <label class="text-xs text-brand-600 font-normal cursor-pointer flex items-center gap-1">
+                            <input type="checkbox" id="selectAllEnvelopes" onchange="toggleSelectAllEnvelopes(this.checked)" class="rounded">
+                            <span>全選</span>
+                        </label>
+                    </h4>
+
+                    <input type="text" id="envSearchInput" oninput="filterEnvelopeCustomers()" placeholder="搜尋客戶名稱或電話..." 
+                        class="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs focus:ring-2 focus:ring-purple-500 focus:outline-none">
+
+                    <div id="envCustomerList" class="h-40 overflow-y-auto border border-slate-200 rounded-lg p-2 space-y-1 bg-slate-50 text-xs custom-scrollbar">
+                        <!-- Dynamic Checkboxes -->
+                    </div>
+
+                    <hr class="border-slate-200">
+
+                    <!-- Envelope Orientation & Sender Options -->
+                    <h4 class="font-bold text-slate-800 text-sm">2. 排版樣式與寄件人設定</h4>
+
+                    <div class="space-y-3 text-xs">
+                        <!-- Orientation Toggle Switch Button Group -->
+                        <div>
+                            <label class="block font-semibold text-slate-700 mb-1">信封擺放方向：</label>
+                            <div class="flex items-center gap-2 bg-slate-100 p-1 rounded-lg border border-slate-200">
+                                <button type="button" id="btnEnvVertical" onclick="setEnvelopeOrientation('vertical')" class="flex-1 py-1.5 rounded-md text-xs font-semibold transition bg-purple-600 text-white shadow flex items-center justify-center gap-1">
+                                    <i class="fa-solid fa-arrows-up-down text-[11px]"></i>
+                                    <span>直式信封</span>
+                                </button>
+                                <button type="button" id="btnEnvHorizontal" onclick="setEnvelopeOrientation('horizontal')" class="flex-1 py-1.5 rounded-md text-xs font-semibold transition bg-slate-200 text-slate-700 hover:bg-slate-300 flex items-center justify-center gap-1">
+                                    <i class="fa-solid fa-arrows-left-right text-[11px]"></i>
+                                    <span>橫式信封</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block font-semibold text-slate-700 mb-1">尊稱稱謂後綴：</label>
+                            <select id="envSuffix" onchange="updateEnvelopePreview()" class="w-full px-3 py-1.5 border border-slate-300 rounded-lg bg-white focus:outline-none">
+                                <option value="">無 (不加稱謂 - 預設)</option>
+                                <option value="台照">台照 (如：正湧 台照)</option>
+                                <option value="鈞啟">鈞啟 (如：正湧 鈞啟)</option>
+                                <option value="收">收 (如：正湧 收)</option>
+                                <option value="先生/小姐">先生/小姐</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block font-semibold text-slate-700 mb-1">寄件人 / 我方資料：</label>
+                            <input type="text" id="envSenderName" value="德峰針織實業有限公司" oninput="updateEnvelopePreview()" placeholder="我方公司名稱" class="w-full px-2.5 py-1.5 border border-slate-300 rounded-md text-xs mb-1.5">
+                            <input type="text" id="envSenderAddr" value="新北市樹林區三俊街85巷3號" oninput="updateEnvelopePreview()" placeholder="我方地址" class="w-full px-2.5 py-1.5 border border-slate-300 rounded-md text-xs mb-1.5">
+                            <input type="text" id="envSenderTel" value="TEL: 02-26898343 / 02-86881142" oninput="updateEnvelopePreview()" placeholder="我方電話" class="w-full px-2.5 py-1.5 border border-slate-300 rounded-md text-xs">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Visual Preview Area -->
+                <div class="lg:col-span-7 flex flex-col bg-slate-100 p-4 rounded-xl border border-slate-200">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="font-bold text-xs text-slate-700 flex items-center gap-1.5">
+                            <i class="fa-solid fa-eye text-purple-600"></i>
+                            <span id="envPreviewTitle">傳統直式信封預覽 (10.3cm × 21.8cm)</span>
+                        </span>
+                        <span id="envSelectedCount" class="text-xs text-purple-700 font-semibold bg-purple-100 px-2 py-0.5 rounded-full">已選擇 0 位客戶</span>
+                    </div>
+
+                    <!-- Envelope Mockup Canvas View -->
+                    <div class="flex-1 min-h-[380px] max-h-[480px] overflow-x-auto custom-scrollbar bg-slate-200/70 p-4 rounded-lg flex items-center justify-center">
+                        <div id="envelopePreviewContainer" class="flex gap-6 items-center">
+                            <!-- Rendered Envelope Previews -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-slate-50 px-6 py-3 border-t border-slate-200 flex items-center justify-between">
+                <div class="text-xs text-slate-500">
+                    <i class="fa-solid fa-circle-info text-purple-500 mr-1"></i>
+                    點擊「確認並列印」將輸出您選擇的標準信封排版格式。
+                </div>
+                <div class="flex items-center gap-2">
+                    <button type="button" onclick="closeEnvelopeModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-medium transition">取消</button>
+                    <button type="button" onclick="confirmPrintEnvelope()" class="px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-semibold shadow transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-print"></i>
+                        <span>確認並列印信封</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="integrationModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl border border-slate-200 w-full max-w-3xl overflow-hidden fade-in">
+            <div class="bg-indigo-900 text-white px-6 py-4 flex items-center justify-between">
+                <h3 class="text-base font-bold flex items-center gap-2">
+                    <i class="fa-solid fa-code text-indigo-400"></i>
+                    <span>跨系統連動整合說明與示範代碼</span>
+                </h3>
+                <button onclick="closeIntegrationModal()" class="text-slate-400 hover:text-white transition text-lg">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="p-6 space-y-5 text-xs text-slate-700 overflow-y-auto max-h-[75vh] custom-scrollbar">
+                <p class="leading-relaxed">
+                    本系統具備「自動對外傳輸客戶清單」之功能。在 <strong class="text-amber-600">紗帳系統</strong> 與 <strong class="text-emerald-600">訂單系統</strong> 中，只需透過標準 JavaScript 存取 <code class="bg-slate-100 px-1.5 py-0.5 rounded text-indigo-600 font-mono">localStorage['textile_customers']</code>，即可達成即時下拉式選單同步與數據帶入！
+                </p>
+
+                <div class="bg-indigo-50/70 border border-indigo-200 rounded-xl p-4 space-y-3">
+                    <h4 class="font-bold text-indigo-900 text-xs flex items-center gap-1.5">
+                        <i class="fa-solid fa-flask text-indigo-600"></i>
+                        <span>跨系統連動測試 (動態下拉選單示範)</span>
+                    </h4>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-600 mb-1">於「紗帳系統」選取客戶：</label>
+                            <select id="simYarnDropdown" onchange="previewSimCustomer(this.value)" class="w-full p-2 border border-slate-300 rounded-lg bg-white text-xs">
+                                <option value="">-- 請選擇客戶資料 --</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-600 mb-1">於「訂單系統」選取客戶：</label>
+                            <select id="simOrderDropdown" onchange="previewSimCustomer(this.value)" class="w-full p-2 border border-slate-300 rounded-lg bg-white text-xs">
+                                <option value="">-- 請選擇客戶資料 --</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="simPreviewBox" class="hidden bg-white p-3 rounded-lg border border-indigo-200 text-xs space-y-1 text-slate-800">
+                        <div class="font-bold text-indigo-700" id="simName"></div>
+                        <div class="grid grid-cols-2 gap-2 text-[11px] text-slate-600 pt-1 border-t border-slate-100">
+                            <div><strong>統編：</strong><span id="simTaxId"></span></div>
+                            <div><strong>電話：</strong><span id="simPhone"></span></div>
+                            <div><strong>傳真：</strong><span id="simFax"></span></div>
+                            <div><strong>聯絡人：</strong><span id="simContact"></span></div>
+                            <div class="col-span-2"><strong>地址：</strong><span id="simAddress"></span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="flex items-center justify-between mb-1.5">
+                        <span class="font-bold text-slate-800">在其他系統中嵌入之連動程式碼 (JavaScript)：</span>
+                        <button onclick="copyCode()" class="text-indigo-600 hover:text-indigo-800 font-semibold flex items-center gap-1">
+                            <i class="fa-solid fa-copy"></i> 複製代碼
+                        </button>
+                    </div>
+                    <pre id="codeSnippet" class="bg-slate-900 text-slate-100 p-3 rounded-xl text-[11px] font-mono leading-relaxed overflow-x-auto custom-scrollbar">
+// 讀取客戶名單並填入下拉選單
+function loadCustomerDropdown(selectElementId) {
+    const raw = localStorage.getItem('textile_customers');
+    const customers = raw ? JSON.parse(raw) : [];
+    const select = document.getElementById(selectElementId);
+    if (!select) return;
+
+    select.innerHTML = '&lt;option value=""&gt;-- 請選擇客戶 --&lt;/option&gt;';
+    customers.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.id;
+        opt.textContent = `${c.name} (${c.category}) - ${c.phone || c.contact || ''}`;
+        select.appendChild(opt);
+    });
+}
+
+// 監聽跨頁籤/跨系統資料同步
+const syncChannel = new BroadcastChannel('textile_system_sync');
+syncChannel.onmessage = (event) => {
+    if (event.data && event.data.type === 'CUSTOMER_UPDATE') {
+        loadCustomerDropdown('yourSelectId');
+    }
+};</pre>
+                </div>
+            </div>
+
+            <div class="bg-slate-50 px-6 py-3 border-t border-slate-200 text-right">
+                <button onclick="closeIntegrationModal()" class="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-semibold shadow transition">關閉窗口</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Printable Envelope Hidden Container -->
+    <div id="printEnvelopeArea" class="hidden"></div>
+
+    <!-- Toast Notification Overlay -->
+    <div id="toast" class="fixed bottom-6 right-6 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 transition-all duration-300 transform translate-y-20 opacity-0 z-50">
+        <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400 text-lg"></i>
+        <span id="toastMsg" class="text-xs font-medium">系統訊息</span>
+    </div>
+
+    <script>
+        const STORAGE_KEY = 'textile_customers';
+        const syncChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('textile_system_sync') : null;
+
+        // Default Sample Data
+        const defaultCustomers = [
+            {
+                id: 'CUST-1001',
+                name: '正湧紡織股份有限公司',
+                category: '布商',
+                taxId: '23456789',
+                zipCode: '241',
+                phone: '(02) 2981-6600',
+                fax: '(02) 2981-6611',
+                contacts: [
+                    { name: '陳總經理', ext: '15' },
+                    { name: '廖小姐 (採購)', ext: '12' }
+                ],
+                email: 'chen@zhenyong-textile.com',
+                address: '新北市三重區光復路二段108號',
+                notes: '常規採購針織布與混紡布，付款條件: 30天票'
+            },
+            {
+                id: 'CUST-1002',
+                name: '遠東新世紀股份有限公司',
+                category: '紗商',
+                taxId: '03520004',
+                zipCode: '106',
+                phone: '(02) 2733-8000',
+                fax: '(02) 2732-2200',
+                contacts: [
+                    { name: '林協理', ext: '882' }
+                ],
+                email: 'sales@fenc.com',
+                address: '臺北市大安區敦化南路二段207號',
+                notes: '聚酯纖維主要供應商'
+            },
+            {
+                id: 'CUST-1003',
+                name: '台南紡織股份有限公司',
+                category: '紗商',
+                taxId: '68202008',
+                zipCode: '701',
+                phone: '(06) 237-6161',
+                fax: '(06) 236-1212',
+                contacts: [
+                    { name: '張課長', ext: '203' },
+                    { name: '王小姐', ext: '205' }
+                ],
+                email: 'order@tainan-spin.com.tw',
+                address: '臺南市東區裕農路375號',
+                notes: '精梳棉紗、混紡紗供應廠'
+            },
+            {
+                id: 'CUST-1004',
+                name: 'GLOBAL TEXTILE CO., LTD.',
+                category: '其他',
+                taxId: 'EX-889021',
+                zipCode: '104',
+                phone: '+886-2-2500-1122',
+                fax: '+886-2-2500-1123',
+                contacts: [
+                    { name: 'Mr. David Smith', ext: '101' }
+                ],
+                email: 'david@globaltextile.com',
+                address: '7F., No. 120, Sec. 2, Jianguo N. Rd., Taipei City',
+                notes: '外銷歐美胚布訂單'
+            }
+        ];
+
+        let customerData = [];
+        let selectedEnvelopeCustIds = [];
+        let envelopeOrientation = 'vertical'; // 'vertical' or 'horizontal'
+
+        window.addEventListener('DOMContentLoaded', () => {
+            loadCustomerData();
+            filterData();
+            
+            if (syncChannel) {
+                syncChannel.onmessage = (event) => {
+                    if (event.data && event.data.type === 'CUSTOMER_UPDATE') {
+                        loadCustomerData();
+                        filterData();
+                    }
+                };
+            }
+        });
+
+        function loadCustomerData() {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (raw) {
+                try {
+                    customerData = JSON.parse(raw);
+                    customerData.forEach(c => {
+                        if (!c.contacts) {
+                            c.contacts = [];
+                            if (c.contact || c.ext) {
+                                c.contacts.push({ name: c.contact || '', ext: c.ext || '' });
+                            }
+                        }
+                        if (c.category === '一般客戶' || c.category === '外銷客戶') c.category = '布商';
+                        else if (c.category === '紗廠') c.category = '紗商';
+                        else if (!['布商', '紗商', '其他'].includes(c.category)) c.category = '其他';
+                    });
+                } catch (e) {
+                    customerData = defaultCustomers;
+                }
+            } else {
+                customerData = defaultCustomers;
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(customerData));
+            }
+            updateStats();
+        }
+
+        function saveData() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(customerData));
+            updateStats();
+            syncIntegrationDropdowns();
+            
+            if (syncChannel) {
+                syncChannel.postMessage({ type: 'CUSTOMER_UPDATE', timestamp: Date.now() });
+            }
+        }
+
+        function updateStats() {
+            document.getElementById('statTotal').innerText = customerData.length;
+            const fabric = customerData.filter(c => c.category === '布商').length;
+            const yarn = customerData.filter(c => c.category === '紗商').length;
+            const other = customerData.filter(c => c.category === '其他').length;
+            
+            document.getElementById('statFabric').innerText = fabric;
+            document.getElementById('statYarn').innerText = yarn;
+            document.getElementById('statOther').innerText = other;
+        }
+
+        function filterData() {
+            const query = document.getElementById('searchInput').value.trim().toLowerCase();
+            const cat = document.getElementById('categoryFilter').value;
+
+            const filtered = customerData.filter(item => {
+                const matchCat = (cat === 'ALL') || (item.category === cat);
+                
+                const contactsMatch = item.contacts && item.contacts.some(ct => 
+                    (ct.name && ct.name.toLowerCase().includes(query)) ||
+                    (ct.ext && ct.ext.toLowerCase().includes(query))
+                );
+
+                const matchQuery = !query || 
+                    (item.name && item.name.toLowerCase().includes(query)) ||
+                    (item.taxId && item.taxId.toLowerCase().includes(query)) ||
+                    (item.phone && item.phone.toLowerCase().includes(query)) ||
+                    (item.notes && item.notes.toLowerCase().includes(query)) ||
+                    contactsMatch;
+                
+                return matchCat && matchQuery;
+            });
+
+            renderTable(filtered);
+            document.getElementById('recordCountText').innerText = `顯示 ${filtered.length} / ${customerData.length} 筆資料`;
+        }
+
+        function resetFilters() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('categoryFilter').value = 'ALL';
+            filterData();
+        }
+
+        function renderTable(data) {
+            const tbody = document.getElementById('customerTableBody');
+            tbody.innerHTML = '';
+
+            if (data.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="9" class="py-12 text-center text-slate-400">
+                            <i class="fa-solid fa-folder-open text-4xl mb-2 text-slate-300 block"></i>
+                            查無符合條件的客戶資料
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            data.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50/80 transition border-b border-slate-100 text-xs';
+
+                let badgeStyle = 'bg-slate-100 text-slate-700';
+                if (item.category === '布商') badgeStyle = 'bg-emerald-50 text-emerald-700 border border-emerald-200';
+                else if (item.category === '紗商') badgeStyle = 'bg-amber-50 text-amber-700 border border-amber-200';
+                else badgeStyle = 'bg-purple-50 text-purple-700 border border-purple-200';
+
+                let contactsHtml = '<span class="text-slate-300">-</span>';
+                if (item.contacts && item.contacts.length > 0) {
+                    contactsHtml = item.contacts.map(c => `
+                        <div class="flex items-center gap-1.5 py-0.5">
+                            <span class="font-semibold text-slate-800"><i class="fa-solid fa-user text-[10px] text-slate-400 mr-1"></i>${c.name || '未填寫'}</span>
+                            ${c.ext ? `<span class="bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded font-mono text-[11px]">分機: ${c.ext}</span>` : ''}
+                        </div>
+                    `).join('');
+                }
+
+                tr.innerHTML = `
+                    <td class="py-3 px-4">
+                        <span class="inline-block px-2.5 py-1 rounded-md text-[11px] font-semibold ${badgeStyle}">
+                            ${item.category || '其他'}
+                        </span>
+                    </td>
+                    <td class="py-3 px-4 font-mono text-slate-600">${item.taxId || '<span class="text-slate-300">-</span>'}</td>
+                    <td class="py-3 px-4 font-bold text-slate-800 text-sm">${item.name || ''}</td>
+                    <td class="py-3 px-4 font-mono text-slate-700">${item.phone || '<span class="text-slate-300">-</span>'}</td>
+                    <td class="py-3 px-4 font-mono text-slate-600">${item.fax || '<span class="text-slate-300">-</span>'}</td>
+                    <td class="py-3 px-4">${contactsHtml}</td>
+                    <td class="py-3 px-4 text-slate-600 max-w-[200px] truncate" title="${item.zipCode ? '[' + item.zipCode + '] ' : ''}${item.address || ''}">
+                        ${item.zipCode ? `<span class="font-mono text-slate-500 mr-1">[${item.zipCode}]</span>` : ''}${item.address || '<span class="text-slate-300">-</span>'}
+                    </td>
+                    <td class="py-3 px-4 text-slate-600 max-w-[150px] truncate" title="${item.notes}">${item.notes || '<span class="text-slate-300">-</span>'}</td>
+                    <td class="py-3 px-4 text-center">
+                        <div class="flex items-center justify-center gap-1.5">
+                            <button onclick="editCustomer('${item.id}')" title="編輯資料" class="p-1.5 text-slate-500 hover:text-brand-600 hover:bg-brand-50 rounded transition">
+                                <i class="fa-solid fa-pen-to-square text-sm"></i>
+                            </button>
+                            <button onclick="deleteCustomer('${item.id}')" title="刪除資料" class="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded transition">
+                                <i class="fa-solid fa-trash-can text-sm"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function addContactRow(name = '', ext = '') {
+            const container = document.getElementById('contactsContainer');
+            const rowId = 'contact_row_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4);
+
+            const div = document.createElement('div');
+            div.id = rowId;
+            div.className = 'flex items-center gap-2 bg-slate-50 p-2 rounded-lg border border-slate-200 fade-in';
+            div.innerHTML = `
+                <div class="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <input type="text" value="${name}" placeholder="主要聯絡人姓名 (例如：陳經理)" 
+                        class="contact-name px-2.5 py-1.5 border border-slate-300 rounded text-xs focus:ring-1 focus:ring-brand-500 focus:outline-none">
+                    <input type="text" value="${ext}" placeholder="分機/直線 (例如：12 或 02-xxx)" 
+                        class="contact-ext px-2.5 py-1.5 border border-slate-300 rounded text-xs focus:ring-1 focus:ring-brand-500 focus:outline-none">
+                </div>
+                <button type="button" onclick="removeContactRow('${rowId}')" title="移除此聯絡人" 
+                    class="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            `;
+            container.appendChild(div);
+        }
+
+        function removeContactRow(rowId) {
+            const container = document.getElementById('contactsContainer');
+            if (container.children.length <= 1) {
+                showToast('至少需保留一組聯絡人欄位', 'info');
+                return;
+            }
+            const el = document.getElementById(rowId);
+            if (el) el.remove();
+        }
+
+        function openCustomerModal(isEdit = false) {
+            const modal = document.getElementById('customerModal');
+            if (!modal) return;
+            
+            modal.classList.remove('hidden');
+            if (!isEdit) {
+                document.getElementById('modalTitle').innerHTML = '<i class="fa-solid fa-user-plus text-brand-500"></i> 新增客戶資料';
+                document.getElementById('customerForm').reset();
+                document.getElementById('customerId').value = '';
+                document.getElementById('contactsContainer').innerHTML = '';
+                addContactRow();
+            }
+        }
+
+        function closeCustomerModal() {
+            const modal = document.getElementById('customerModal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        function editCustomer(id) {
+            const item = customerData.find(c => c.id === id);
+            if (!item) return;
+
+            document.getElementById('customerId').value = item.id;
+            document.getElementById('fieldTaxName').value = item.name || '';
+            document.getElementById('fieldCategory').value = item.category || '布商';
+            document.getElementById('fieldTaxId').value = item.taxId || '';
+            document.getElementById('fieldZipCode').value = item.zipCode || '';
+            document.getElementById('fieldEmail').value = item.email || '';
+            document.getElementById('fieldPhone').value = item.phone || '';
+            document.getElementById('fieldFax').value = item.fax || '';
+            document.getElementById('fieldAddress').value = item.address || '';
+            document.getElementById('fieldNotes').value = item.notes || '';
+
+            const container = document.getElementById('contactsContainer');
+            container.innerHTML = '';
+            if (item.contacts && item.contacts.length > 0) {
+                item.contacts.forEach(c => addContactRow(c.name, c.ext));
+            } else {
+                addContactRow(item.contact || '', item.ext || '');
+            }
+
+            document.getElementById('modalTitle').innerHTML = '<i class="fa-solid fa-pen-to-square text-brand-500"></i> 編輯客戶資料';
+            openCustomerModal(true);
+        }
+
+        function deleteCustomer(id) {
+            showConfirmDialog('確定要刪除這筆客戶資料嗎？刪除後無法恢復。', () => {
+                customerData = customerData.filter(c => c.id !== id);
+                saveData();
+                filterData();
+                showToast('已刪除客戶資料！', 'success');
+            });
+        }
+
+        function saveCustomer(e) {
+            e.preventDefault();
+            const id = document.getElementById('customerId').value;
+            const name = document.getElementById('fieldTaxName').value.trim();
+
+            if (!name) {
+                showToast('請輸入客戶名稱！', 'error');
+                return;
+            }
+
+            const contactRows = document.querySelectorAll('#contactsContainer > div');
+            const contacts = [];
+            contactRows.forEach(row => {
+                const cName = row.querySelector('.contact-name').value.trim();
+                const cExt = row.querySelector('.contact-ext').value.trim();
+                if (cName || cExt) {
+                    contacts.push({ name: cName, ext: cExt });
+                }
+            });
+
+            const customerObj = {
+                id: id || ('CUST-' + Date.now()),
+                name: name,
+                category: document.getElementById('fieldCategory').value,
+                taxId: document.getElementById('fieldTaxId').value.trim(),
+                zipCode: document.getElementById('fieldZipCode').value.trim(),
+                email: document.getElementById('fieldEmail').value.trim(),
+                phone: document.getElementById('fieldPhone').value.trim(),
+                fax: document.getElementById('fieldFax').value.trim(),
+                contacts: contacts,
+                address: document.getElementById('fieldAddress').value.trim(),
+                notes: document.getElementById('fieldNotes').value.trim()
+            };
+
+            if (id) {
+                const index = customerData.findIndex(c => c.id === id);
+                if (index !== -1) customerData[index] = customerObj;
+                showToast('客戶資料已修訂！', 'success');
+            } else {
+                customerData.unshift(customerObj);
+                showToast('已新增客戶資料！', 'success');
+            }
+
+            saveData();
+            filterData();
+            closeCustomerModal();
+        }
+
+        // 開啟信封列印 Modal
+        function openEnvelopeModal() {
+            const modal = document.getElementById('envelopeModal');
+            if (!modal) return;
+            modal.classList.remove('hidden');
+            renderEnvelopeCustomerList();
+            updateEnvelopePreview();
+        }
+
+        function closeEnvelopeModal() {
+            const modal = document.getElementById('envelopeModal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        function updateEnvelopePreview() {
+            const container = document.getElementById('envelopePreviewContainer');
+            const countEl = document.getElementById('envSelectedCount');
+            container.innerHTML = '';
+
+            countEl.innerText = `已選擇 ${selectedEnvelopeCustIds.length} 位客戶`;
+
+            if (selectedEnvelopeCustIds.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-12 text-slate-400 w-full">
+                        <i class="fa-solid fa-envelope text-4xl mb-2 text-slate-300 block"></i>
+                        請在左側勾選欲列印信封的客戶
+                    </div>
+                `;
+                return;
+            }
+
+            const suffix = document.getElementById('envSuffix').value;
+            const senderName = document.getElementById('envSenderName').value;
+            const senderAddr = document.getElementById('envSenderAddr').value;
+            const senderTel = document.getElementById('envSenderTel').value;
+
+            selectedEnvelopeCustIds.forEach(id => {
+                const cust = customerData.find(c => c.id === id);
+                if (!cust) return;
+
+                const firstContactName = (cust.contacts && cust.contacts.length > 0 && cust.contacts[0].name) ? `（${cust.contacts[0].name}）` : '';
+                const envelopeCard = document.createElement('div');
+
+                if (envelopeOrientation === 'vertical') {
+                    // VERTICAL LAYOUT (10.3cm x 21.8cm 實體比例預覽)
+                    envelopeCard.className = 'bg-white rounded-lg shadow-lg border border-amber-300 p-4 w-[185px] h-[392px] relative text-slate-900 font-kai select-none shrink-0 overflow-hidden';
+                    envelopeCard.innerHTML = `
+                        <!-- Recipient Zip Code (Top Right, Horizontal) -->
+                        ${cust.zipCode ? `
+                        <div class="absolute top-3.5 right-4 font-mono font-bold text-xs tracking-widest text-slate-900 bg-slate-100/80 px-1 py-0.5 rounded border border-slate-200">
+                            ${cust.zipCode}
+                        </div>
+                        ` : ''}
+
+                        <!-- Recipient Address (Top Right Vertical, Below Zip Code) -->
+                        <div class="absolute ${cust.zipCode ? 'top-11' : 'top-4'} right-4 writing-mode-vertical text-[11px] text-slate-800 font-medium tracking-wider max-h-[200px] overflow-hidden leading-relaxed break-all">
+                            ${cust.address || '（未輸入地址）'}
+                        </div>
+
+                        <!-- Recipient Name (Center Big) -->
+                        <div class="absolute top-10 left-1/2 -translate-x-1/2 writing-mode-vertical text-base font-bold tracking-widest text-slate-900 max-h-[220px] overflow-hidden leading-snug">
+                            ${cust.name} ${suffix ? `<span class="text-xs font-normal text-slate-700 ml-1">${suffix}</span>` : ''} ${firstContactName}
+                        </div>
+
+                        <!-- Sender Info (Bottom Left: 3 Distinct Vertical Rows) -->
+                        <div class="absolute bottom-4 left-3 flex items-end gap-1.5 max-h-[160px] overflow-hidden">
+                            <!-- Row 3 (Outer): Phone Rotated 90 degrees -->
+                            <div class="writing-mode-vertical text-[9px] text-slate-700 tracking-tight whitespace-nowrap">
+                                ${senderTel}
+                            </div>
+                            <!-- Row 2 (Middle): Address -->
+                            <div class="writing-mode-vertical text-[9px] text-slate-800 tracking-normal border-r border-slate-300 pr-0.5">
+                                ${senderAddr}
+                            </div>
+                            <!-- Row 1 (Inner): Company Name -->
+                            <div class="writing-mode-vertical font-bold text-slate-900 text-[10px] tracking-wider border-r border-slate-300 pr-0.5">
+                                ${senderName}
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    // HORIZONTAL LAYOUT (21.8cm x 10.3cm 實體比例預覽)
+                    envelopeCard.className = 'bg-white rounded-lg shadow-lg border border-amber-300 p-4 w-[392px] h-[185px] flex flex-col justify-between relative text-slate-900 font-kai select-none shrink-0 overflow-hidden';
+                    envelopeCard.innerHTML = `
+                        <!-- Top Left Sender Info -->
+                        <div class="text-[10px] space-y-0.5 text-slate-800 leading-tight">
+                            <div class="font-bold text-[11px] text-slate-900">${senderName}</div>
+                            <div class="text-slate-800">${senderAddr}</div>
+                            <div class="text-slate-700 font-mono text-[9px]">${senderTel}</div>
+                        </div>
+
+                        <!-- Center/Right Recipient Info -->
+                        <div class="my-auto pl-12 pr-4 space-y-1">
+                            <div class="text-xs font-medium text-slate-800 tracking-wide border-b border-slate-300 pb-1">
+                                ${cust.zipCode ? `<span class="font-mono font-bold mr-1.5">${cust.zipCode}</span>` : ''}${cust.address || '（未輸入地址）'}
+                            </div>
+                            <div class="text-base font-bold text-slate-900 tracking-wider">
+                                ${cust.name} ${suffix ? `<span class="text-xs font-normal text-slate-700 ml-1">${suffix}</span>` : ''} ${firstContactName}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                container.appendChild(envelopeCard);
+            });
+        }
+
+        function confirmPrintEnvelope() {
+            if (selectedEnvelopeCustIds.length === 0) {
+                showToast('請先勾選至少一位客戶！', 'error');
+                return;
+            }
+
+            const printArea = document.getElementById('printEnvelopeArea');
+            printArea.innerHTML = '';
+            printArea.classList.remove('hidden');
+
+            const suffix = document.getElementById('envSuffix').value;
+            const senderName = document.getElementById('envSenderName').value;
+            const senderAddr = document.getElementById('envSenderAddr').value;
+            const senderTel = document.getElementById('envSenderTel').value;
+
+            selectedEnvelopeCustIds.forEach(id => {
+                const cust = customerData.find(c => c.id === id);
+                if (!cust) return;
+
+                const firstContactName = (cust.contacts && cust.contacts.length > 0 && cust.contacts[0].name) ? `（${cust.contacts[0].name}）` : '';
+                const page = document.createElement('div');
+
+                if (envelopeOrientation === 'vertical') {
+                    // Printable Vertical Page (無列印外框線)
+                    page.className = 'envelope-page envelope-vertical text-slate-900 font-kai bg-white relative overflow-hidden';
+                    page.innerHTML = `
+                        <!-- Recipient Zip Code (Top Right, Horizontal) -->
+                        ${cust.zipCode ? `
+                        <div class="absolute top-[10mm] right-[10mm] font-mono font-bold text-lg tracking-widest text-slate-900">
+                            ${cust.zipCode}
+                        </div>
+                        ` : ''}
+
+                        <!-- Recipient Address (Top Right Vertical, Below Zip Code) -->
+                        <div class="absolute ${cust.zipCode ? 'top-[20mm]' : 'top-[10mm]'} right-[10mm] writing-mode-vertical text-base text-slate-900 font-medium tracking-wider max-h-[140mm] overflow-hidden leading-relaxed break-all">
+                            ${cust.address || ''}
+                        </div>
+
+                        <!-- Recipient Name (Center Big) -->
+                        <div class="absolute top-[25mm] left-1/2 -translate-x-1/2 writing-mode-vertical text-2xl font-bold tracking-widest text-slate-900 max-h-[140mm] overflow-hidden leading-snug">
+                            ${cust.name} ${suffix ? `<span class="text-base font-normal text-slate-800 ml-1.5">${suffix}</span>` : ''} ${firstContactName}
+                        </div>
+
+                        <!-- Sender Info (3 Distinct Vertical Rows) -->
+                        <div class="absolute bottom-[10mm] left-[10mm] flex items-end gap-2 max-h-[100mm] overflow-hidden">
+                            <div class="writing-mode-vertical text-xs text-slate-700 tracking-tight whitespace-nowrap">
+                                ${senderTel}
+                            </div>
+                            <div class="writing-mode-vertical text-xs text-slate-800 tracking-normal border-r border-slate-300 pr-1">
+                                ${senderAddr}
+                            </div>
+                            <div class="writing-mode-vertical font-bold text-slate-900 text-sm tracking-wider border-r border-slate-300 pr-1">
+                                ${senderName}
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    // Printable Horizontal Page (無列印外框線)
+                    page.className = 'envelope-page envelope-horizontal flex flex-col justify-between text-slate-900 font-kai bg-white relative overflow-hidden';
+                    page.innerHTML = `
+                        <div class="text-xs space-y-1 text-slate-900 leading-tight">
+                            <div class="font-bold text-sm text-slate-900">${senderName}</div>
+                            <div class="text-slate-800">${senderAddr}</div>
+                            <div class="text-slate-700 font-mono text-xs">${senderTel}</div>
+                        </div>
+
+                        <div class="my-auto pl-20 pr-8 space-y-3">
+                            <div class="text-base font-medium text-slate-900 tracking-wide border-b-2 border-slate-300 pb-1.5">
+                                ${cust.zipCode ? `<span class="font-mono font-bold mr-2">${cust.zipCode}</span>` : ''}${cust.address || ''}
+                            </div>
+                            <div class="text-2xl font-bold text-slate-900 tracking-widest">
+                                ${cust.name} ${suffix ? `<span class="text-base font-normal text-slate-800 ml-2">${suffix}</span>` : ''} ${firstContactName}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                printArea.appendChild(page);
+            });
+
+            // 強制瀏覽器 Reflow，解決第一次點擊時直書排版未重繪導致跑位之問題
+            void printArea.offsetHeight;
+
+            setTimeout(() => {
+                window.print();
+                setTimeout(() => {
+                    printArea.classList.add('hidden');
+                }, 500);
+            }, 150);
+        }
+
+        function setEnvelopeOrientation(orientation) {
+            envelopeOrientation = orientation;
+            
+            const btnV = document.getElementById('btnEnvVertical');
+            const btnH = document.getElementById('btnEnvHorizontal');
+            const titleEl = document.getElementById('envPreviewTitle');
+
+            if (orientation === 'vertical') {
+                btnV.className = 'flex-1 py-1.5 rounded-md text-xs font-semibold transition bg-purple-600 text-white shadow flex items-center justify-center gap-1';
+                btnH.className = 'flex-1 py-1.5 rounded-md text-xs font-semibold transition bg-slate-200 text-slate-700 hover:bg-slate-300 flex items-center justify-center gap-1';
+                if (titleEl) titleEl.innerText = '傳統直式信封預覽 (10.3cm × 21.8cm)';
+            } else {
+                btnH.className = 'flex-1 py-1.5 rounded-md text-xs font-semibold transition bg-purple-600 text-white shadow flex items-center justify-center gap-1';
+                btnV.className = 'flex-1 py-1.5 rounded-md text-xs font-semibold transition bg-slate-200 text-slate-700 hover:bg-slate-300 flex items-center justify-center gap-1';
+                if (titleEl) titleEl.innerText = '標準橫式信封預覽 (21.8cm × 10.3cm)';
+            }
+
+            updateEnvelopePreview();
+        }
+
+        function renderEnvelopeCustomerList() {
+            const query = (document.getElementById('envSearchInput')?.value || '').trim().toLowerCase();
+            const listContainer = document.getElementById('envCustomerList');
+            if (!listContainer) return;
+
+            const filtered = customerData.filter(c => 
+                !query || 
+                (c.name && c.name.toLowerCase().includes(query)) ||
+                (c.phone && c.phone.toLowerCase().includes(query)) ||
+                (c.taxId && c.taxId.toLowerCase().includes(query))
+            );
+
+            listContainer.innerHTML = '';
+            if (filtered.length === 0) {
+                listContainer.innerHTML = '<div class="text-slate-400 p-3 text-center">查無符合條件的客戶</div>';
+                return;
+            }
+
+            filtered.forEach(c => {
+                const isChecked = selectedEnvelopeCustIds.includes(c.id);
+                const item = document.createElement('label');
+                item.className = 'flex items-center gap-2 p-1.5 hover:bg-slate-100 rounded cursor-pointer select-none border-b border-slate-100 last:border-none';
+                item.innerHTML = `
+                    <input type="checkbox" value="${c.id}" ${isChecked ? 'checked' : ''} onchange="toggleEnvelopeSelection('${c.id}', this.checked)" class="rounded text-purple-600 focus:ring-purple-500">
+                    <span class="font-medium text-slate-800 flex-1 truncate">${c.name}</span>
+                    <span class="text-slate-400 text-[10px] bg-slate-200 px-1.5 py-0.5 rounded">${c.category}</span>
+                `;
+                listContainer.appendChild(item);
+            });
+        }
+
+        function filterEnvelopeCustomers() {
+            renderEnvelopeCustomerList();
+        }
+
+        function toggleEnvelopeSelection(id, checked) {
+            if (checked) {
+                if (!selectedEnvelopeCustIds.includes(id)) {
+                    selectedEnvelopeCustIds.push(id);
+                }
+            } else {
+                selectedEnvelopeCustIds = selectedEnvelopeCustIds.filter(item => item !== id);
+            }
+
+            const selectAllCb = document.getElementById('selectAllEnvelopes');
+            if (selectAllCb) {
+                selectAllCb.checked = customerData.length > 0 && selectedEnvelopeCustIds.length === customerData.length;
+            }
+
+            updateEnvelopePreview();
+        }
+
+        function toggleSelectAllEnvelopes(isChecked) {
+            if (isChecked) {
+                selectedEnvelopeCustIds = customerData.map(c => c.id);
+            } else {
+                selectedEnvelopeCustIds = [];
+            }
+            renderEnvelopeCustomerList();
+            updateEnvelopePreview();
+        }
+
+        function openIntegrationModal() {
+            const modal = document.getElementById('integrationModal');
+            if (!modal) return;
+            syncIntegrationDropdowns();
+            modal.classList.remove('hidden');
+        }
+
+        function closeIntegrationModal() {
+            const modal = document.getElementById('integrationModal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+        function syncIntegrationDropdowns() {
+            const simYarnSelect = document.getElementById('simYarnDropdown');
+            const simOrderSelect = document.getElementById('simOrderDropdown');
+            if (!simYarnSelect || !simOrderSelect) return;
+
+            const defaultOpt = '<option value="">-- 請選擇客戶資料 --</option>';
+            const options = customerData.map(c => {
+                const contactText = (c.contacts && c.contacts.length > 0) ? c.contacts.map(ct => `${ct.name}${ct.ext ? `(分機:${ct.ext})` : ''}`).join(', ') : '無聯絡人';
+                return `<option value="${c.id}">${c.name} [${c.category}] - ${contactText}</option>`;
+            }).join('');
+
+            simYarnSelect.innerHTML = defaultOpt + options;
+            simOrderSelect.innerHTML = defaultOpt + options;
+        }
+
+        function previewSimCustomer(id) {
+            const box = document.getElementById('simPreviewBox');
+            if (!id) {
+                box.classList.add('hidden');
+                return;
+            }
+            const item = customerData.find(c => c.id === id);
+            if (!item) return;
+
+            const contactsText = (item.contacts && item.contacts.length > 0) 
+                ? item.contacts.map(c => `${c.name || '姓名未填'} ${c.ext ? `(分機:${c.ext})` : ''}`).join('； ') 
+                : '無聯絡人資料';
+
+            document.getElementById('simName').innerText = `${item.name} [${item.category}]`;
+            document.getElementById('simTaxId').innerText = item.taxId || '空白';
+            document.getElementById('simPhone').innerText = item.phone || '空白';
+            document.getElementById('simFax').innerText = item.fax || '空白';
+            document.getElementById('simContact').innerText = contactsText;
+            document.getElementById('simAddress').innerText = item.address || '空白';
+            box.classList.remove('hidden');
+        }
+
+        function exportExcel() {
+            if (!customerData || customerData.length === 0) {
+                showToast('目前沒有可匯出的客戶資料！', 'error');
+                return;
+            }
+
+            try {
+                const excelData = customerData.map(item => {
+                    const contactsStr = (item.contacts && item.contacts.length > 0)
+                        ? item.contacts.map(c => `${c.name || ''}${c.ext ? ` (分機: ${c.ext})` : ''}`).filter(Boolean).join('； ')
+                        : '';
+
+                    return {
+                        '客戶類別': item.category || '',
+                        '統一編號': item.taxId || '',
+                        '客戶/公司名稱': item.name || '',
+                        '公司電話': item.phone || '',
+                        '傳真': item.fax || '',
+                        '主要聯絡人與分機': contactsStr,
+                        '電子郵件': item.email || '',
+                        '郵遞區號': item.zipCode || '',
+                        '地址': item.address || '',
+                        '備註說明': item.notes || ''
+                    };
+                });
+
+                const worksheet = XLSX.utils.json_to_sheet(excelData);
+
+                // 自動計算各欄長度，包含全形中文與半形英數，避免文字被遮擋
+                const keys = Object.keys(excelData[0] || {});
+                const colWidths = keys.map(key => {
+                    let maxLen = 0;
+                    // 計算標頭長度
+                    for (let i = 0; i < key.length; i++) {
+                        maxLen += key.charCodeAt(i) > 255 ? 2.2 : 1.1;
+                    }
+                    // 計算資料內容長度
+                    excelData.forEach(row => {
+                        const val = String(row[key] || '');
+                        let len = 0;
+                        for (let i = 0; i < val.length; i++) {
+                            len += val.charCodeAt(i) > 255 ? 2.2 : 1.1;
+                        }
+                        if (len > maxLen) maxLen = len;
+                    });
+                    // 給予適當留白邊界 (寬度 + 4)
+                    return { wch: Math.max(Math.ceil(maxLen) + 4, 12) };
+                });
+
+                worksheet['!cols'] = colWidths;
+
+                const workbook = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(workbook, worksheet, '客戶名單');
+
+                const fileName = `客戶名單_${new Date().toISOString().slice(0, 10)}.xlsx`;
+                XLSX.writeFile(workbook, fileName);
+                showToast('成功下載 Excel 試算表！', 'success');
+            } catch (err) {
+                console.error(err);
+                showToast('匯出 Excel 失敗，請再試一次', 'error');
+            }
+        }
+
+        function importJSON(event) {
+            const fileReader = new FileReader();
+            fileReader.onload = function(e) {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if (Array.isArray(imported)) {
+                        customerData = imported;
+                        saveData();
+                        filterData();
+                        showToast('成功匯入備份資料！', 'success');
+                    } else {
+                        showToast('匯入失敗：檔案格式不正確', 'error');
+                    }
+                } catch (err) {
+                    showToast('檔案解析錯誤，請上傳正確 JSON 備份檔', 'error');
+                }
+            };
+            if (event.target.files[0]) {
+                fileReader.readAsText(event.target.files[0]);
+            }
+        }
+
+        function showToast(msg, type = 'success') {
+            const toast = document.getElementById('toast');
+            const icon = document.getElementById('toastIcon');
+            const msgEl = document.getElementById('toastMsg');
+
+            msgEl.innerText = msg;
+            if (type === 'success') {
+                icon.className = 'fa-solid fa-circle-check text-emerald-400 text-lg';
+            } else if (type === 'error') {
+                icon.className = 'fa-solid fa-triangle-exclamation text-rose-400 text-lg';
+            } else {
+                icon.className = 'fa-solid fa-circle-info text-sky-400 text-lg';
+            }
+
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+
+        function showConfirmDialog(message, onConfirm) {
+            const overlay = document.createElement('div');
+            overlay.className = 'fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 fade-in';
+            overlay.innerHTML = `
+                <div class="bg-white rounded-xl shadow-xl max-w-sm w-full p-5 text-center space-y-4">
+                    <div class="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto text-xl">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </div>
+                    <h3 class="font-bold text-slate-800 text-base">${message}</h3>
+                    <div class="flex gap-2 justify-center pt-2">
+                        <button id="cancelBtn" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold">取消</button>
+                        <button id="confirmBtn" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-semibold shadow">確認刪除</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+
+            overlay.querySelector('#cancelBtn').onclick = () => overlay.remove();
+            overlay.querySelector('#confirmBtn').onclick = () => {
+                onConfirm();
+                overlay.remove();
+            };
+        }
+
+        function copyCode() {
+            const codeText = document.getElementById('codeSnippet').innerText;
+            const textarea = document.createElement('textarea');
+            textarea.value = codeText;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+            showToast('已複製跨系統整合代碼！', 'success');
+        }
+    </script>
+</body>
+</html>
