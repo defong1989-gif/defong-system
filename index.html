@@ -540,9 +540,11 @@
     
     const orderRef = ref(db, 'orderRecords');
     const yarnRef = ref(db, 'yarnRecords');
+    const customerRef = ref(db, 'customerRecords'); // 連動客戶名單資料庫路徑
 
     let orderDataMap = {};
     let yarnDataMap = {};
+    let customerDataMap = {};
     let currentRenderedOrders = [];
     let currentBase64Photo = "";
 
@@ -562,25 +564,45 @@
         return clean ? `${clean}G` : '';
     }
 
+    // 監聽訂單資料
     onValue(orderRef, (snapshot) => {
         orderDataMap = snapshot.val() || {};
         updateCustomerDropdowns();
         window.renderTable();
     });
 
+    // 監聽紗帳資料
     onValue(yarnRef, (snapshot) => {
         yarnDataMap = snapshot.val() || {};
         updateCustomerDropdowns();
         window.onCustomerChange();
     });
 
+    // 監聽客戶名單資料 (關鍵修正：載入客戶名單)
+    onValue(customerRef, (snapshot) => {
+        customerDataMap = snapshot.val() || {};
+        updateCustomerDropdowns();
+    });
+
+    // 彙整並更新客戶選單 (包含客戶名單、訂單、紗帳中的客戶)
     function updateCustomerDropdowns() {
         const customers = new Set();
+        
+        // 1. 載入客戶名單系統中的客戶
+        Object.values(customerDataMap).forEach(i => {
+            const name = i.customerName || i.name || i.companyName;
+            if (name && typeof name === 'string') customers.add(name.trim());
+        });
+
+        // 2. 載入歷史訂單出現過的客戶
         Object.values(orderDataMap).forEach(i => i.customerName && customers.add(i.customerName.trim()));
+
+        // 3. 載入紗帳紀錄出現過的客戶
         Object.values(yarnDataMap).forEach(i => i.customerName && customers.add(i.customerName.trim()));
 
-        const sortedCustomers = Array.from(customers).sort();
+        const sortedCustomers = Array.from(customers).filter(Boolean).sort();
 
+        // 更新 datalist 供表單輸入選取
         const datalist = document.getElementById("customerDatalist");
         datalist.innerHTML = "";
         sortedCustomers.forEach(c => {
@@ -589,6 +611,7 @@
             datalist.appendChild(opt);
         });
 
+        // 更新歷史紀錄篩選選單
         const filterSelect = document.getElementById("filterCustomer");
         const currentVal = filterSelect.value;
         filterSelect.innerHTML = '<option value="">-- 全部客戶 --</option>';
@@ -771,6 +794,18 @@
         e.preventDefault();
 
         const editKey = document.getElementById("editKey").value;
+        const customerNameInput = document.getElementById("customerName").value.trim();
+
+        if (!customerNameInput) return;
+
+        // 檢查客戶名稱是否為新客戶，若是新客戶則自動新增至客戶名單系統
+        const existingCustomers = Object.values(customerDataMap).map(c => (c.customerName || c.name || c.companyName || '').trim());
+        if (!existingCustomers.includes(customerNameInput)) {
+            push(customerRef, {
+                customerName: customerNameInput,
+                createdAt: new Date().toISOString()
+            });
+        }
 
         const checkedYarns = Array.from(document.querySelectorAll('#yarnCheckboxGroup input[type="checkbox"]:checked'))
                                   .map(cb => cb.value);
@@ -782,7 +817,7 @@
         const rawNeedle = document.getElementById("machineNeedle").value.trim();
 
         const orderData = {
-            customerName: document.getElementById("customerName").value.trim(),
+            customerName: customerNameInput,
             orderDate: document.getElementById("orderDate").value,
             deliveryDate: document.getElementById("deliveryDate").value,
             fabricType: document.getElementById("fabricType").value.trim(),
