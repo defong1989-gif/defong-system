@@ -15,6 +15,28 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&family=Noto+Serif+TC:wght@600;700&display=swap" rel="stylesheet">
     
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Noto Sans TC', 'sans-serif'],
+                        serif: ['Noto Serif TC', 'serif']
+                    }
+                }
+            }
+        }
+    </script>
+    
     <style>
         body { font-family: 'Noto Sans TC', sans-serif; }
         .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -282,6 +304,7 @@
                     <div class="col-span-1 sm:col-span-2 border-t border-b border-slate-200 py-3 my-1">
                         <div class="flex items-center justify-between mb-2">
                             <label class="block text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                                <i class="fa-solid fa-users text-brand-600"></i>
                                 <span>聯絡人與分機設定 (可新增多位聯絡人)</span>
                             </label>
                             <button type="button" onclick="addContactRow()" class="px-2.5 py-1 bg-brand-50 text-brand-600 hover:bg-brand-100 rounded-md text-xs font-semibold transition flex items-center gap-1">
@@ -825,7 +848,6 @@
                 const cust = customerData.find(c => c.id === id);
                 if (!cust) return;
 
-                const firstContactName = (cust.contacts && cust.contacts.length > 0 && cust.contacts[0].name) ? `（${cust.contacts[0].name}）` : '';
                 const envelopeCard = document.createElement('div');
 
                 if (envelopeOrientation === 'vertical') {
@@ -842,7 +864,7 @@
                         </div>
 
                         <div class="absolute top-10 left-1/2 -translate-x-1/2 writing-mode-vertical text-base font-bold tracking-widest text-slate-900 max-h-[220px] overflow-hidden leading-snug">
-                            ${cust.name} ${suffix ? `<span class="text-xs font-normal text-slate-700 ml-1">${suffix}</span>` : ''} ${firstContactName}
+                            ${cust.name} ${suffix ? `<span class="text-xs font-normal text-slate-700 ml-1">${suffix}</span>` : ''}
                         </div>
 
                         <div class="absolute bottom-4 left-3 flex items-end gap-1.5 max-h-[160px] overflow-hidden">
@@ -871,7 +893,7 @@
                                 ${cust.zipCode ? `<span class="font-mono font-bold mr-1.5">${cust.zipCode}</span>` : ''}${cust.address || '（未輸入地址）'}
                             </div>
                             <div class="text-base font-bold text-slate-900 tracking-wider">
-                                ${cust.name} ${suffix ? `<span class="text-xs font-normal text-slate-700 ml-1">${suffix}</span>` : ''} ${firstContactName}
+                                ${cust.name} ${suffix ? `<span class="text-xs font-normal text-slate-700 ml-1">${suffix}</span>` : ''}
                             </div>
                         </div>
                     `;
@@ -900,7 +922,6 @@
                 const cust = customerData.find(c => c.id === id);
                 if (!cust) return;
 
-                const firstContactName = (cust.contacts && cust.contacts.length > 0 && cust.contacts[0].name) ? `（${cust.contacts[0].name}）` : '';
                 const page = document.createElement('div');
 
                 if (envelopeOrientation === 'vertical') {
@@ -917,7 +938,7 @@
                         </div>
 
                         <div class="absolute top-[25mm] left-1/2 -translate-x-1/2 writing-mode-vertical text-2xl font-bold tracking-widest text-slate-900 max-h-[140mm] overflow-hidden leading-snug">
-                            ${cust.name} ${suffix ? `<span class="text-base font-normal text-slate-800 ml-1.5">${suffix}</span>` : ''} ${firstContactName}
+                            ${cust.name} ${suffix ? `<span class="text-base font-normal text-slate-800 ml-1.5">${suffix}</span>` : ''}
                         </div>
 
                         <div class="absolute bottom-[10mm] left-[10mm] flex items-end gap-2 max-h-[100mm] overflow-hidden">
@@ -946,7 +967,7 @@
                                 ${cust.zipCode ? `<span class="font-mono font-bold mr-2">${cust.zipCode}</span>` : ''}${cust.address || ''}
                             </div>
                             <div class="text-2xl font-bold text-slate-900 tracking-widest">
-                                ${cust.name} ${suffix ? `<span class="text-base font-normal text-slate-800 ml-2">${suffix}</span>` : ''} ${firstContactName}
+                                ${cust.name} ${suffix ? `<span class="text-base font-normal text-slate-800 ml-2">${suffix}</span>` : ''}
                             </div>
                         </div>
                     `;
@@ -1054,6 +1075,8 @@
             }
 
             try {
+                const headers = ['客戶類別', '統一編號', '客戶/公司名稱', '公司電話', '傳真', '主要聯絡人與分機', '電子郵件', '郵遞區號', '地址', '備註說明'];
+
                 const excelData = customerData.map(item => {
                     const contactsStr = (item.contacts && item.contacts.length > 0)
                         ? item.contacts.map(c => `${c.name || ''}${c.ext ? ` (分機: ${c.ext})` : ''}`).filter(Boolean).join('； ')
@@ -1075,23 +1098,20 @@
 
                 const worksheet = XLSX.utils.json_to_sheet(excelData);
 
-                // 自動計算欄寬，避免字體覆蓋或切掉
-                const colWidths = Object.keys(excelData[0]).map(key => {
-                    let maxLen = key.length * 2; // 表頭長度預估
+                // 自動計算每欄的適當寬度，避免文字互相覆蓋
+                const colWidths = headers.map(header => {
+                    let maxLen = header.length * 2; // 中文字計算寬度
                     excelData.forEach(row => {
-                        const val = row[key] ? String(row[key]) : '';
-                        // 計算全角中文字與半角字元的等效長度
-                        let currentLen = 0;
+                        const val = row[header] ? String(row[header]) : '';
+                        // 計算字元長度（全形字視為 2 個字元）
+                        let len = 0;
                         for (let i = 0; i < val.length; i++) {
-                            currentLen += val.charCodeAt(i) > 255 ? 2.2 : 1.1;
+                            len += val.charCodeAt(i) > 255 ? 2 : 1;
                         }
-                        if (currentLen > maxLen) {
-                            maxLen = currentLen;
-                        }
+                        if (len > maxLen) maxLen = len;
                     });
-                    return { wch: Math.min(Math.max(maxLen + 3, 10), 60) }; // 設定寬度介於 10 到 60 之間
+                    return { wch: Math.min(Math.max(maxLen + 3, 12), 50) };
                 });
-
                 worksheet['!cols'] = colWidths;
 
                 const workbook = XLSX.utils.book_new();
